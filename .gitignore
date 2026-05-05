@@ -1,0 +1,23 @@
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Gradle / Java
+.gradle/
+build/
+out/
+**/bin/
+hs_err_pid*
+replay_pid*
+
+# Test reports
+*.log
+junit.xml
