@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/autoparts
+    username: autoparts
+    password: autoparts
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+app:
+  meilisearch:
+    host: http://localhost:7700
+    master-key: devkey
+  s3:
+    endpoint: http://localhost:9000
+    region: us-east-1
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: autoparts-local
+  mail:
+    host: localhost
+    port: 1025
+
+logging:
+  level:
+    root: INFO
+    az.autoparts: DEBUG
