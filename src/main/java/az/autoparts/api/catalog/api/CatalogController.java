@@ -13,12 +13,14 @@ import org.springframework.web.bind.annotation.RestController;
 import az.autoparts.api.catalog.api.dto.CategoryDetailResponse;
 import az.autoparts.api.catalog.api.dto.CategoryResponse;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
+import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
 import az.autoparts.api.catalog.api.dto.VehicleMakeResponse;
 import az.autoparts.api.catalog.api.dto.VehicleModelResponse;
 import az.autoparts.api.catalog.api.dto.VehicleVariantResponse;
 import az.autoparts.api.catalog.service.CatalogService;
 import az.autoparts.api.common.locale.Locale;
+import az.autoparts.api.common.pagination.PageResponse;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -64,6 +66,16 @@ public class CatalogController {
         @RequestHeader(name = "Accept-Language", required = false) String acceptLanguage
     ) {
         return catalogService.getCategoryBySlug(slug, Locale.fromHeaderOrDefault(acceptLanguage));
+    }
+
+    @GetMapping("/categories/{slug}/parts")
+    public PageResponse<PartListItem> listPartsInCategory(
+        @PathVariable String slug,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size,
+        @RequestHeader(name = "Accept-Language", required = false) String acceptLanguage
+    ) {
+        return catalogService.listPartsInCategory(slug, page, size, Locale.fromHeaderOrDefault(acceptLanguage));
     }
 
     @GetMapping("/parts/{partId}")

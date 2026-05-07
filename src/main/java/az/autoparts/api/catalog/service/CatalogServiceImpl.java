@@ -13,10 +13,15 @@ import az.autoparts.api.catalog.api.dto.CategoryDetailResponse;
 import az.autoparts.api.catalog.api.dto.CategoryDetailResponse.CategoryBreadcrumb;
 import az.autoparts.api.catalog.api.dto.CategoryResponse;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
+import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
 import az.autoparts.api.catalog.api.dto.VehicleMakeResponse;
 import az.autoparts.api.catalog.api.dto.VehicleModelResponse;
 import az.autoparts.api.catalog.api.dto.VehicleVariantResponse;
+import az.autoparts.api.common.pagination.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import az.autoparts.api.catalog.api.mapper.CategoryMapper;
 import az.autoparts.api.catalog.api.mapper.LocalisedNameSupport;
 import az.autoparts.api.catalog.api.mapper.PartMapper;
@@ -142,6 +147,21 @@ class CatalogServiceImpl implements CatalogService {
             cursor = cursor.getParent();
         }
         return trail;
+    }
+
+    @Override
+    public PageResponse<PartListItem> listPartsInCategory(String slug, int page, int size, Locale locale) {
+        Category category = categories.findBySlug(slug)
+            .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + slug));
+
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(100, Math.max(1, size));
+
+        Page<Part> result = parts.findActiveByCategoryId(
+            category.getId(),
+            PageRequest.of(safePage, safeSize, Sort.by("createdAt").descending())
+        );
+        return PageResponse.of(result).map(p -> partMapper.toListItem(p, locale));
     }
 
     @Override

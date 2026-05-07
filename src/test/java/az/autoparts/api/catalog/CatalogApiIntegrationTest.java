@@ -217,6 +217,25 @@ class CatalogApiIntegrationTest {
     }
 
     @Test
+    void parts_in_category_returns_page_with_items() {
+        given().header("Accept-Language", "en")
+            .when().get("/api/v1/catalog/categories/brake-pads/parts")
+            .then().statusCode(200)
+            .body("page", is(0))
+            .body("size", is(20))
+            .body("total", is(1))
+            .body("items.size()", is(1))
+            .body("items[0].name", equalTo("Front brake pad"))
+            .body("items[0].brand", equalTo("Bosch"));
+    }
+
+    @Test
+    void parts_in_unknown_category_is_404() {
+        given().when().get("/api/v1/catalog/categories/no-such/parts")
+            .then().statusCode(404);
+    }
+
+    @Test
     void unknown_part_id_is_404() {
         given().when().get("/api/v1/catalog/parts/{partId}", UUID.randomUUID())
             .then().statusCode(404);

@@ -6,11 +6,13 @@ import java.util.UUID;
 import az.autoparts.api.catalog.api.dto.CategoryDetailResponse;
 import az.autoparts.api.catalog.api.dto.CategoryResponse;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
+import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
 import az.autoparts.api.catalog.api.dto.VehicleMakeResponse;
 import az.autoparts.api.catalog.api.dto.VehicleModelResponse;
 import az.autoparts.api.catalog.api.dto.VehicleVariantResponse;
 import az.autoparts.api.common.locale.Locale;
+import az.autoparts.api.common.pagination.PageResponse;
 
 /**
  * Public read API of the catalog module. Other modules (search, listings, ...)
@@ -29,6 +31,8 @@ public interface CatalogService {
     List<CategoryResponse> getCategoryTree(Locale locale);
 
     CategoryDetailResponse getCategoryBySlug(String slug, Locale locale);
+
+    PageResponse<PartListItem> listPartsInCategory(String slug, int page, int size, Locale locale);
 
     PartResponse getPart(UUID partId, Locale locale);
 

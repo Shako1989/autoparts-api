@@ -3,6 +3,7 @@ package az.autoparts.api.catalog.api.mapper;
 import java.util.List;
 
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
+import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
 import az.autoparts.api.catalog.api.dto.PartResponse.PartNumberEntry;
 import az.autoparts.api.catalog.domain.Fitment;
@@ -30,6 +31,15 @@ public class PartMapper {
             part.getDescription(),
             part.getDefaultImageUrl(),
             numberEntries
+        );
+    }
+
+    public PartListItem toListItem(Part part, Locale locale) {
+        return new PartListItem(
+            part.getId(),
+            LocalisedNameSupport.name(part, locale),
+            part.getBrand(),
+            part.getDefaultImageUrl()
         );
     }
 
