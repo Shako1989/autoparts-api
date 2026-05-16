@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import az.autoparts.api.catalog.api.dto.CategoryDetailResponse;
 import az.autoparts.api.catalog.api.dto.CategoryResponse;
+import az.autoparts.api.catalog.api.dto.DiagramResponse;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
 import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
@@ -37,4 +38,8 @@ public interface CatalogService {
     PartResponse getPart(UUID partId, Locale locale);
 
     List<FitmentResponse> getPartFitments(UUID partId);
+
+    DiagramResponse getDiagramBySlug(String slug, Locale locale);
+
+    List<DiagramResponse> getCategoryDiagrams(String slug, Locale locale);
 }

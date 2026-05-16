@@ -1,5 +1,6 @@
 package az.autoparts.api.catalog.repo;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,4 +13,6 @@ public interface PartNumberRepository extends JpaRepository<PartNumber, UUID> {
     List<PartNumber> findAllByNumber(String number);
 
     List<PartNumber> findAllByPartId(UUID partId);
+
+    List<PartNumber> findAllByPartIdIn(Collection<UUID> partIds);
 }

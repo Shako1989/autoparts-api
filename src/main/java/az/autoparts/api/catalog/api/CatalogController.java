@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import az.autoparts.api.catalog.api.dto.CategoryDetailResponse;
 import az.autoparts.api.catalog.api.dto.CategoryResponse;
+import az.autoparts.api.catalog.api.dto.DiagramResponse;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
 import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
@@ -89,5 +90,21 @@ public class CatalogController {
     @GetMapping("/parts/{partId}/fitments")
     public List<FitmentResponse> getPartFitments(@PathVariable UUID partId) {
         return catalogService.getPartFitments(partId);
+    }
+
+    @GetMapping("/diagrams/{slug}")
+    public DiagramResponse getDiagram(
+        @PathVariable String slug,
+        @RequestHeader(name = "Accept-Language", required = false) String acceptLanguage
+    ) {
+        return catalogService.getDiagramBySlug(slug, Locale.fromHeaderOrDefault(acceptLanguage));
+    }
+
+    @GetMapping("/categories/{slug}/diagrams")
+    public List<DiagramResponse> getCategoryDiagrams(
+        @PathVariable String slug,
+        @RequestHeader(name = "Accept-Language", required = false) String acceptLanguage
+    ) {
+        return catalogService.getCategoryDiagrams(slug, Locale.fromHeaderOrDefault(acceptLanguage));
     }
 }

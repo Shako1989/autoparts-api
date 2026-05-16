@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import az.autoparts.api.catalog.api.dto.CategoryDetailResponse;
 import az.autoparts.api.catalog.api.dto.CategoryDetailResponse.CategoryBreadcrumb;
 import az.autoparts.api.catalog.api.dto.CategoryResponse;
+import az.autoparts.api.catalog.api.dto.DiagramResponse;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
 import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
@@ -23,13 +25,19 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import az.autoparts.api.catalog.api.mapper.CategoryMapper;
+import az.autoparts.api.catalog.api.mapper.DiagramMapper;
 import az.autoparts.api.catalog.api.mapper.LocalisedNameSupport;
 import az.autoparts.api.catalog.api.mapper.PartMapper;
 import az.autoparts.api.catalog.api.mapper.VehicleMapper;
 import az.autoparts.api.catalog.domain.Category;
+import az.autoparts.api.catalog.domain.Diagram;
+import az.autoparts.api.catalog.domain.DiagramCallout;
 import az.autoparts.api.catalog.domain.Part;
+import az.autoparts.api.catalog.domain.PartNumber;
 import az.autoparts.api.catalog.domain.VehicleMake;
 import az.autoparts.api.catalog.repo.CategoryRepository;
+import az.autoparts.api.catalog.repo.DiagramCalloutRepository;
+import az.autoparts.api.catalog.repo.DiagramRepository;
 import az.autoparts.api.catalog.repo.FitmentRepository;
 import az.autoparts.api.catalog.repo.PartNumberRepository;
 import az.autoparts.api.catalog.repo.PartRepository;
@@ -52,10 +60,13 @@ class CatalogServiceImpl implements CatalogService {
     private final PartRepository parts;
     private final PartNumberRepository partNumbers;
     private final FitmentRepository fitments;
+    private final DiagramRepository diagrams;
+    private final DiagramCalloutRepository diagramCallouts;
 
     private final VehicleMapper vehicleMapper;
     private final CategoryMapper categoryMapper;
     private final PartMapper partMapper;
+    private final DiagramMapper diagramMapper;
 
     @Override
     public List<VehicleMakeResponse> listMakes() {
@@ -179,5 +190,31 @@ class CatalogServiceImpl implements CatalogService {
         return fitments.findAllByPartId(partId).stream()
             .map(partMapper::toFitmentResponse)
             .toList();
+    }
+
+    @Override
+    public DiagramResponse getDiagramBySlug(String slug, Locale locale) {
+        Diagram diagram = diagrams.findBySlug(slug)
+            .orElseThrow(() -> new ResourceNotFoundException("Diagram not found: " + slug));
+        return hydrate(diagram, locale);
+    }
+
+    @Override
+    public List<DiagramResponse> getCategoryDiagrams(String slug, Locale locale) {
+        Category category = categories.findBySlug(slug)
+            .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + slug));
+        return diagrams.findAllByCategoryId(category.getId()).stream()
+            .map(d -> hydrate(d, locale))
+            .toList();
+    }
+
+    private DiagramResponse hydrate(Diagram diagram, Locale locale) {
+        List<DiagramCallout> callouts = diagramCallouts.findAllByDiagramId(diagram.getId());
+        List<UUID> partIds = callouts.stream().map(c -> c.getPart().getId()).distinct().toList();
+        Map<UUID, List<PartNumber>> numbersByPart = partIds.isEmpty()
+            ? Map.of()
+            : partNumbers.findAllByPartIdIn(partIds).stream()
+                .collect(Collectors.groupingBy(n -> n.getPart().getId()));
+        return diagramMapper.toResponse(diagram, callouts, numbersByPart, locale);
     }
 }
