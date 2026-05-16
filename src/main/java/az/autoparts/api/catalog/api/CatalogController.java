@@ -90,6 +90,7 @@ public class CatalogController {
     @GetMapping("/parts/{partId}/fitments")
     public List<FitmentResponse> getPartFitments(@PathVariable UUID partId) {
         return catalogService.getPartFitments(partId);
+
     }
 
     @GetMapping("/diagrams/{slug}")
