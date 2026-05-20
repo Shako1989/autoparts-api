@@ -1,5 +1,7 @@
 package az.autoparts.api.catalog.repo;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,4 +20,7 @@ public interface PartRepository extends JpaRepository<Part, UUID> {
 
     @Query("select p from Part p where p.deletedAt is null and p.category.id = :categoryId")
     Page<Part> findActiveByCategoryId(UUID categoryId, Pageable pageable);
+
+    @Query("select p from Part p left join fetch p.category where p.id in :ids and p.deletedAt is null")
+    List<Part> findAllByIdInWithCategory(@org.springframework.data.repository.query.Param("ids") Collection<UUID> ids);
 }

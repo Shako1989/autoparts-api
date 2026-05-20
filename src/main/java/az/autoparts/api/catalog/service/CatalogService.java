@@ -1,6 +1,8 @@
 package az.autoparts.api.catalog.service;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import az.autoparts.api.catalog.api.dto.CategoryDetailResponse;
@@ -9,6 +11,7 @@ import az.autoparts.api.catalog.api.dto.DiagramResponse;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
 import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
+import az.autoparts.api.catalog.api.dto.PartSummary;
 import az.autoparts.api.catalog.api.dto.VehicleMakeResponse;
 import az.autoparts.api.catalog.api.dto.VehicleModelResponse;
 import az.autoparts.api.catalog.api.dto.VehicleVariantResponse;
@@ -36,6 +39,18 @@ public interface CatalogService {
     PageResponse<PartListItem> listPartsInCategory(String slug, int page, int size, Locale locale);
 
     PartResponse getPart(UUID partId, Locale locale);
+
+    /**
+     * Returns whether a part exists (non-deleted). Used by other modules
+     * (e.g. listings) to validate references without loading the full entity.
+     */
+    boolean partExists(UUID partId);
+
+    /**
+     * Batch-fetches minimal part info for many parts. Used by search and listings
+     * to enrich results without N+1.
+     */
+    Map<UUID, PartSummary> getPartsSummary(Collection<UUID> partIds, Locale locale);
 
     List<FitmentResponse> getPartFitments(UUID partId);
 

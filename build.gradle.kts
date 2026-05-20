@@ -22,6 +22,7 @@ extra["awsSdkVersion"] = "2.30.5"
 extra["meilisearchVersion"] = "0.14.5"
 extra["mapstructVersion"] = "1.6.3"
 extra["springdocVersion"] = "2.7.0"
+extra["jjwtVersion"] = "0.12.6"
 
 dependencies {
 	// Spring Boot starters
@@ -50,6 +51,12 @@ dependencies {
 
 	// Object storage (S3-compatible)
 	implementation("software.amazon.awssdk:s3:${property("awsSdkVersion")}")
+	implementation("software.amazon.awssdk:auth:${property("awsSdkVersion")}")
+
+	// JWT (jjwt)
+	implementation("io.jsonwebtoken:jjwt-api:${property("jjwtVersion")}")
+	runtimeOnly("io.jsonwebtoken:jjwt-impl:${property("jjwtVersion")}")
+	runtimeOnly("io.jsonwebtoken:jjwt-jackson:${property("jjwtVersion")}")
 
 	// Lombok
 	compileOnly("org.projectlombok:lombok")

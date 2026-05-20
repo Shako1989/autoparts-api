@@ -1,6 +1,7 @@
 package az.autoparts.api.catalog.service;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import az.autoparts.api.catalog.api.dto.DiagramResponse;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
 import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
+import az.autoparts.api.catalog.api.dto.PartSummary;
 import az.autoparts.api.catalog.api.dto.VehicleMakeResponse;
 import az.autoparts.api.catalog.api.dto.VehicleModelResponse;
 import az.autoparts.api.catalog.api.dto.VehicleVariantResponse;
@@ -180,6 +182,28 @@ class CatalogServiceImpl implements CatalogService {
         Part part = parts.findWithCategoryById(partId)
             .orElseThrow(() -> new ResourceNotFoundException("Part not found: " + partId));
         return partMapper.toResponse(part, partNumbers.findAllByPartId(partId), locale);
+    }
+
+    @Override
+    public boolean partExists(UUID partId) {
+        return parts.existsById(partId);
+    }
+
+    @Override
+    public Map<UUID, PartSummary> getPartsSummary(Collection<UUID> partIds, Locale locale) {
+        if (partIds == null || partIds.isEmpty()) return Map.of();
+        Map<UUID, PartSummary> out = new HashMap<>();
+        for (Part p : parts.findAllByIdInWithCategory(partIds)) {
+            out.put(p.getId(), new PartSummary(
+                p.getId(),
+                p.getCategory().getId(),
+                p.getCategory().getSlug(),
+                LocalisedNameSupport.name(p, locale),
+                p.getBrand(),
+                p.getDefaultImageUrl()
+            ));
+        }
+        return out;
     }
 
     @Override

@@ -18,6 +18,12 @@ app:
     access-key: minioadmin
     secret-key: minioadmin
     bucket: autoparts-local
+    listings-bucket: autoparts-listings
+    listings-public-base: http://localhost:9000/autoparts-listings
+  jwt:
+    secret: change-me-to-a-32-plus-char-dev-secret-string-please
+    issuer: autoparts-api
+    access-ttl: P1D
   mail:
     host: localhost
     port: 1025
