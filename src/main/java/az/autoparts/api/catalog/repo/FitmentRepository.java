@@ -13,5 +13,10 @@ public interface FitmentRepository extends JpaRepository<Fitment, UUID> {
     @EntityGraph(attributePaths = {"vehicleVariant", "vehicleVariant.model", "vehicleVariant.model.make"})
     List<Fitment> findAllByPartId(UUID partId);
 
+    @EntityGraph(attributePaths = {"vehicleVariant", "vehicleVariant.model", "vehicleVariant.model.make"})
+    List<Fitment> findAllByPartIdIn(java.util.Collection<UUID> partIds);
+
     List<Fitment> findAllByVehicleVariantId(UUID vehicleVariantId);
+
+    boolean existsByPartIdAndVehicleVariantId(UUID partId, UUID vehicleVariantId);
 }

@@ -24,6 +24,10 @@ app:
     secret: change-me-to-a-32-plus-char-dev-secret-string-please
     issuer: autoparts-api
     access-ttl: P1D
+  admin:
+    phones: ["+994501234567"]
+  cors:
+    allowed-origins: "http://localhost:5173,http://127.0.0.1:5173,http://192.168.*.*:5173,http://10.*.*.*:5173,http://*.local:5173"
   mail:
     host: localhost
     port: 1025
@@ -32,3 +36,5 @@ logging:
   level:
     root: INFO
     az.autoparts: DEBUG
+admin:
+  phones: ["+994501234567"]

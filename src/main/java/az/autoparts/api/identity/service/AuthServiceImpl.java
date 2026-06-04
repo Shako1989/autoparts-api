@@ -39,6 +39,7 @@ class AuthServiceImpl implements AuthService {
     private final OtpSender otpSender;
     private final PasswordEncoder encoder;
     private final JwtService jwt;
+    private final AdminBootstrapProperties adminBootstrap;
 
     private final SecureRandom random = new SecureRandom();
 
@@ -65,8 +66,7 @@ class AuthServiceImpl implements AuthService {
     @Transactional
     public TokenResponse verifyOtp(OtpVerifyRequest request) {
         OtpCode entry = otps
-            .findTopByPhoneAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(
-                request.phone(), inferPurpose(request.phone()))
+            .findTopByPhoneAndConsumedAtIsNullOrderByCreatedAtDesc(request.phone())
             .orElseThrow(() -> new BadRequestException("No active code — request a new one"));
         if (Instant.now().isAfter(entry.getExpiresAt())) {
             throw new BadRequestException("Code expired — request a new one");
@@ -92,6 +92,9 @@ class AuthServiceImpl implements AuthService {
         if (user.getFullName() == null && request.fullName() != null && !request.fullName().isBlank()) {
             user.setFullName(request.fullName());
         }
+        if (user.getRole() == Role.BUYER && adminBootstrap.isAllowlisted(user.getPhone())) {
+            user.setRole(Role.STAFF);
+        }
         user.setLastLoginAt(Instant.now());
         users.save(user);
 
@@ -115,10 +118,6 @@ class AuthServiceImpl implements AuthService {
     private MeResponse toMe(User user) {
         boolean hasProfile = sellers.findByUserId(user.getId()).isPresent();
         return new MeResponse(user.getId(), user.getPhone(), user.getFullName(), user.getRole(), hasProfile);
-    }
-
-    private OtpPurpose inferPurpose(String phone) {
-        return users.existsByPhone(phone) ? OtpPurpose.LOGIN : OtpPurpose.REGISTER;
     }
 
     private String generateCode() {

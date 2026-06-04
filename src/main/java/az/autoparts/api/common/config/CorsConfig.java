@@ -15,7 +15,7 @@ public class CorsConfig {
     @Bean
     CorsFilter corsFilter(@Value("#{'${app.cors.allowed-origins}'.split(',')}") List<String> allowedOrigins) {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(allowedOrigins);
+        cfg.setAllowedOriginPatterns(allowedOrigins);
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setExposedHeaders(List.of("Location", "Content-Disposition"));

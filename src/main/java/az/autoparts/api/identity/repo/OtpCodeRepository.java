@@ -12,4 +12,6 @@ public interface OtpCodeRepository extends JpaRepository<OtpCode, UUID> {
 
     Optional<OtpCode> findTopByPhoneAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(
         String phone, OtpPurpose purpose);
+
+    Optional<OtpCode> findTopByPhoneAndConsumedAtIsNullOrderByCreatedAtDesc(String phone);
 }

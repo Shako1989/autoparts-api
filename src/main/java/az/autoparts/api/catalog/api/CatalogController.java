@@ -72,11 +72,15 @@ public class CatalogController {
     @GetMapping("/categories/{slug}/parts")
     public PageResponse<PartListItem> listPartsInCategory(
         @PathVariable String slug,
+        @RequestParam(name = "make", required = false) String makeSlug,
+        @RequestParam(name = "model", required = false) String modelSlug,
+        @RequestParam(name = "year", required = false) Short year,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size,
         @RequestHeader(name = "Accept-Language", required = false) String acceptLanguage
     ) {
-        return catalogService.listPartsInCategory(slug, page, size, Locale.fromHeaderOrDefault(acceptLanguage));
+        return catalogService.listPartsInCategory(
+            slug, makeSlug, modelSlug, year, page, size, Locale.fromHeaderOrDefault(acceptLanguage));
     }
 
     @GetMapping("/parts/{partId}")

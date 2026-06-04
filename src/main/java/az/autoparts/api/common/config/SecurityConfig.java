@@ -14,9 +14,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import az.autoparts.api.common.security.JwtAuthenticationFilter;
 import az.autoparts.api.common.security.JwtProperties;
+import az.autoparts.api.identity.service.AdminBootstrapProperties;
 
 @Configuration
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, AdminBootstrapProperties.class})
 public class SecurityConfig {
 
     @Bean

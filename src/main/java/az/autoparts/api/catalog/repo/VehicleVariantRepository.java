@@ -14,4 +14,16 @@ public interface VehicleVariantRepository extends JpaRepository<VehicleVariant, 
 
     @Query("select distinct v.year from VehicleVariant v where v.model.id = :modelId order by v.year")
     List<Short> findDistinctYearsByModelId(UUID modelId);
+
+    @Query("""
+        select v from VehicleVariant v
+         where v.model.make.slug = :makeSlug
+           and v.model.slug = :modelSlug
+           and v.year = :year
+        """)
+    List<VehicleVariant> findAllByMakeSlugAndModelSlugAndYear(
+        @org.springframework.data.repository.query.Param("makeSlug") String makeSlug,
+        @org.springframework.data.repository.query.Param("modelSlug") String modelSlug,
+        @org.springframework.data.repository.query.Param("year") short year
+    );
 }

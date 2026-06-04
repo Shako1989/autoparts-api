@@ -60,6 +60,9 @@ public class ListingServiceImpl implements ListingService {
         if (!catalog.partExists(request.partId())) {
             throw new ResourceNotFoundException("Part not found: " + request.partId());
         }
+        if (request.fitments() != null && !request.fitments().isEmpty()) {
+            catalog.addFitments(request.partId(), request.fitments());
+        }
         Listing listing = listings.save(Listing.builder()
             .sellerId(sellerId)
             .partId(request.partId())
@@ -208,6 +211,12 @@ public class ListingServiceImpl implements ListingService {
     @Transactional(readOnly = true)
     public PartListingStats summaryForPart(UUID partId) {
         return countActiveForParts(List.of(partId)).getOrDefault(partId, PartListingStats.empty(partId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasActiveListingsForPart(UUID partId) {
+        return summaryForPart(partId).activeCount() > 0;
     }
 
     // ---------- helpers ----------

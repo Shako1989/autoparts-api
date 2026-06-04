@@ -8,6 +8,7 @@ import java.util.UUID;
 import az.autoparts.api.catalog.api.dto.CategoryDetailResponse;
 import az.autoparts.api.catalog.api.dto.CategoryResponse;
 import az.autoparts.api.catalog.api.dto.DiagramResponse;
+import az.autoparts.api.catalog.api.dto.FitmentInput;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
 import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
@@ -36,7 +37,8 @@ public interface CatalogService {
 
     CategoryDetailResponse getCategoryBySlug(String slug, Locale locale);
 
-    PageResponse<PartListItem> listPartsInCategory(String slug, int page, int size, Locale locale);
+    PageResponse<PartListItem> listPartsInCategory(
+        String slug, String makeSlug, String modelSlug, Short year, int page, int size, Locale locale);
 
     PartResponse getPart(UUID partId, Locale locale);
 
@@ -53,6 +55,14 @@ public interface CatalogService {
     Map<UUID, PartSummary> getPartsSummary(Collection<UUID> partIds, Locale locale);
 
     List<FitmentResponse> getPartFitments(UUID partId);
+
+    /**
+     * Idempotently attaches fitments to a catalog part. Each input expands to
+     * all variants matching (makeSlug, modelSlug, year); a fitment row is
+     * inserted only if one doesn't already exist for that (part, variant) pair.
+     * Returns the number of newly-created fitment rows.
+     */
+    int addFitments(UUID partId, List<FitmentInput> fitments);
 
     DiagramResponse getDiagramBySlug(String slug, Locale locale);
 

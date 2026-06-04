@@ -40,4 +40,10 @@ public interface ListingService {
     Map<UUID, PartListingStats> countActiveForParts(Collection<UUID> partIds);
 
     PartListingStats summaryForPart(UUID partId);
+
+    /**
+     * Whether any ACTIVE listing references the given part. Used by admin
+     * delete-part to block destructive operations.
+     */
+    boolean hasActiveListingsForPart(UUID partId);
 }

@@ -1,8 +1,11 @@
 package az.autoparts.api.listings.api.dto;
 
+import java.util.List;
 import java.util.UUID;
 
+import az.autoparts.api.catalog.api.dto.FitmentInput;
 import az.autoparts.api.listings.domain.ListingCondition;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,5 +21,6 @@ public record CreateListingRequest(
     @Positive long priceMinor,
     @NotBlank @Pattern(regexp = "^[A-Z]{3}$") String currency,
     @Min(0) int quantity,
-    @Size(max = 80) String city
+    @Size(max = 80) String city,
+    @Valid List<FitmentInput> fitments
 ) {}

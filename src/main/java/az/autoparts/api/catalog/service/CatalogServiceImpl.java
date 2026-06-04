@@ -15,6 +15,7 @@ import az.autoparts.api.catalog.api.dto.CategoryDetailResponse;
 import az.autoparts.api.catalog.api.dto.CategoryDetailResponse.CategoryBreadcrumb;
 import az.autoparts.api.catalog.api.dto.CategoryResponse;
 import az.autoparts.api.catalog.api.dto.DiagramResponse;
+import az.autoparts.api.catalog.api.dto.FitmentInput;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
 import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
@@ -34,7 +35,9 @@ import az.autoparts.api.catalog.api.mapper.VehicleMapper;
 import az.autoparts.api.catalog.domain.Category;
 import az.autoparts.api.catalog.domain.Diagram;
 import az.autoparts.api.catalog.domain.DiagramCallout;
+import az.autoparts.api.catalog.domain.Fitment;
 import az.autoparts.api.catalog.domain.Part;
+import az.autoparts.api.catalog.domain.VehicleVariant;
 import az.autoparts.api.catalog.domain.PartNumber;
 import az.autoparts.api.catalog.domain.VehicleMake;
 import az.autoparts.api.catalog.repo.CategoryRepository;
@@ -163,17 +166,22 @@ class CatalogServiceImpl implements CatalogService {
     }
 
     @Override
-    public PageResponse<PartListItem> listPartsInCategory(String slug, int page, int size, Locale locale) {
+    public PageResponse<PartListItem> listPartsInCategory(
+        String slug, String makeSlug, String modelSlug, Short year, int page, int size, Locale locale
+    ) {
         Category category = categories.findBySlug(slug)
             .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + slug));
 
         int safePage = Math.max(0, page);
         int safeSize = Math.min(100, Math.max(1, size));
+        PageRequest pageable = PageRequest.of(safePage, safeSize, Sort.by("createdAt").descending());
 
-        Page<Part> result = parts.findActiveByCategoryId(
-            category.getId(),
-            PageRequest.of(safePage, safeSize, Sort.by("createdAt").descending())
-        );
+        boolean filterByVehicle = makeSlug != null && !makeSlug.isBlank()
+            && modelSlug != null && !modelSlug.isBlank()
+            && year != null;
+        Page<Part> result = filterByVehicle
+            ? parts.findActiveByCategoryAndMakeModelYear(category.getId(), makeSlug, modelSlug, year, pageable)
+            : parts.findActiveByCategoryId(category.getId(), pageable);
         return PageResponse.of(result).map(p -> partMapper.toListItem(p, locale));
     }
 
@@ -214,6 +222,29 @@ class CatalogServiceImpl implements CatalogService {
         return fitments.findAllByPartId(partId).stream()
             .map(partMapper::toFitmentResponse)
             .toList();
+    }
+
+    @Override
+    @Transactional
+    public int addFitments(UUID partId, List<FitmentInput> inputs) {
+        if (inputs == null || inputs.isEmpty()) return 0;
+        Part part = parts.findById(partId)
+            .orElseThrow(() -> new ResourceNotFoundException("Part not found: " + partId));
+        int added = 0;
+        for (FitmentInput in : inputs) {
+            List<VehicleVariant> matchingVariants = variants
+                .findAllByMakeSlugAndModelSlugAndYear(in.makeSlug(), in.modelSlug(), in.year());
+            for (VehicleVariant v : matchingVariants) {
+                if (!fitments.existsByPartIdAndVehicleVariantId(part.getId(), v.getId())) {
+                    fitments.save(Fitment.builder()
+                        .part(part)
+                        .vehicleVariant(v)
+                        .build());
+                    added++;
+                }
+            }
+        }
+        return added;
     }
 
     @Override
