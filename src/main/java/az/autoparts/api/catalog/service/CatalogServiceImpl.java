@@ -255,10 +255,18 @@ class CatalogServiceImpl implements CatalogService {
     }
 
     @Override
-    public List<DiagramResponse> getCategoryDiagrams(String slug, Locale locale) {
+    public List<DiagramResponse> getCategoryDiagrams(
+        String slug, String makeSlug, String modelSlug, Short year, Locale locale
+    ) {
         Category category = categories.findBySlug(slug)
             .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + slug));
-        return diagrams.findAllByCategoryId(category.getId()).stream()
+        boolean filterByVehicle = makeSlug != null && !makeSlug.isBlank()
+            && modelSlug != null && !modelSlug.isBlank()
+            && year != null;
+        List<Diagram> result = filterByVehicle
+            ? diagrams.findCompatibleByCategoryIdAndMakeModelYear(category.getId(), makeSlug, modelSlug, year)
+            : diagrams.findAllByCategoryId(category.getId());
+        return result.stream()
             .map(d -> hydrate(d, locale))
             .toList();
     }

@@ -14,5 +14,6 @@ public record AdminPartResponse(
     String description,
     String defaultImageUrl,
     List<AdminPartNumberEntry> partNumbers,
-    List<AdminFitmentEntry> fitments
+    List<AdminFitmentEntry> fitments,
+    List<AdminPartCalloutLocation> calloutLocations
 ) {}

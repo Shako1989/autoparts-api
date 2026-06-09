@@ -66,5 +66,6 @@ public interface CatalogService {
 
     DiagramResponse getDiagramBySlug(String slug, Locale locale);
 
-    List<DiagramResponse> getCategoryDiagrams(String slug, Locale locale);
+    List<DiagramResponse> getCategoryDiagrams(
+        String slug, String makeSlug, String modelSlug, Short year, Locale locale);
 }

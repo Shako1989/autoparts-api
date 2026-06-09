@@ -108,8 +108,12 @@ public class CatalogController {
     @GetMapping("/categories/{slug}/diagrams")
     public List<DiagramResponse> getCategoryDiagrams(
         @PathVariable String slug,
+        @RequestParam(name = "make", required = false) String makeSlug,
+        @RequestParam(name = "model", required = false) String modelSlug,
+        @RequestParam(name = "year", required = false) Short year,
         @RequestHeader(name = "Accept-Language", required = false) String acceptLanguage
     ) {
-        return catalogService.getCategoryDiagrams(slug, Locale.fromHeaderOrDefault(acceptLanguage));
+        return catalogService.getCategoryDiagrams(
+            slug, makeSlug, modelSlug, year, Locale.fromHeaderOrDefault(acceptLanguage));
     }
 }

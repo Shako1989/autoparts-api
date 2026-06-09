@@ -20,6 +20,8 @@ app:
     bucket: autoparts-local
     listings-bucket: autoparts-listings
     listings-public-base: http://localhost:9000/autoparts-listings
+    catalog-bucket: autopart-diagrams
+    catalog-public-base: http://localhost:9000/autopart-diagrams
   jwt:
     secret: change-me-to-a-32-plus-char-dev-secret-string-please
     issuer: autoparts-api
@@ -36,5 +38,3 @@ logging:
   level:
     root: INFO
     az.autoparts: DEBUG
-admin:
-  phones: ["+994501234567"]

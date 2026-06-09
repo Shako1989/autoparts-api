@@ -10,5 +10,7 @@ public record S3Properties(
     String secretKey,
     String bucket,
     String listingsBucket,
-    String listingsPublicBase
+    String listingsPublicBase,
+    String catalogBucket,
+    String catalogPublicBase
 ) {}

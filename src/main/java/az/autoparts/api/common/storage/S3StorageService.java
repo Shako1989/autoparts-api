@@ -46,5 +46,13 @@ public class S3StorageService {
         return props.listingsPublicBase() + "/" + key;
     }
 
+    public String catalogBucket() {
+        return props.catalogBucket();
+    }
+
+    public String publicUrlForCatalog(String key) {
+        return props.catalogPublicBase() + "/" + key;
+    }
+
     public record PresignedPut(String uploadUrl, long expiresInSeconds) {}
 }

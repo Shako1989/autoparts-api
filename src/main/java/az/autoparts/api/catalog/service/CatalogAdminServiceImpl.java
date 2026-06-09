@@ -13,42 +13,65 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import az.autoparts.api.catalog.api.admin.dto.AdminCalloutEntry;
 import az.autoparts.api.catalog.api.admin.dto.AdminCategoryResponse;
+import az.autoparts.api.catalog.api.admin.dto.AdminDiagramListItem;
+import az.autoparts.api.catalog.api.admin.dto.AdminDiagramResponse;
 import az.autoparts.api.catalog.api.admin.dto.AdminFitmentEntry;
 import az.autoparts.api.catalog.api.admin.dto.AdminPartListItem;
 import az.autoparts.api.catalog.api.admin.dto.AdminPartNumberEntry;
+import az.autoparts.api.catalog.api.admin.dto.AdminPartCalloutLocation;
 import az.autoparts.api.catalog.api.admin.dto.AdminPartResponse;
+import az.autoparts.api.catalog.api.admin.dto.AdminPresignedUploadResponse;
+import az.autoparts.api.catalog.api.admin.dto.CreateCalloutRequest;
 import az.autoparts.api.catalog.api.admin.dto.CreateCategoryRequest;
+import az.autoparts.api.catalog.api.admin.dto.CreateDiagramRequest;
 import az.autoparts.api.catalog.api.admin.dto.CreatePartNumberRequest;
 import az.autoparts.api.catalog.api.admin.dto.CreatePartRequest;
 import az.autoparts.api.catalog.api.admin.dto.ReorderCategoriesRequest;
+import az.autoparts.api.catalog.api.admin.dto.UpdateCalloutRequest;
 import az.autoparts.api.catalog.api.admin.dto.UpdateCategoryRequest;
+import az.autoparts.api.catalog.api.admin.dto.UpdateDiagramRequest;
 import az.autoparts.api.catalog.api.admin.dto.UpdatePartRequest;
 import az.autoparts.api.catalog.api.dto.FitmentInput;
 import az.autoparts.api.catalog.domain.Category;
+import az.autoparts.api.catalog.domain.Diagram;
+import az.autoparts.api.catalog.domain.DiagramCallout;
 import az.autoparts.api.catalog.domain.Fitment;
 import az.autoparts.api.catalog.domain.Part;
 import az.autoparts.api.catalog.domain.PartNumber;
+import az.autoparts.api.catalog.domain.VehicleVariant;
 import az.autoparts.api.catalog.repo.CategoryRepository;
+import az.autoparts.api.catalog.repo.DiagramCalloutRepository;
+import az.autoparts.api.catalog.repo.DiagramRepository;
 import az.autoparts.api.catalog.repo.FitmentRepository;
 import az.autoparts.api.catalog.repo.PartNumberRepository;
 import az.autoparts.api.catalog.repo.PartRepository;
+import az.autoparts.api.catalog.repo.VehicleVariantRepository;
 import az.autoparts.api.common.error.BadRequestException;
 import az.autoparts.api.common.error.ResourceNotFoundException;
 import az.autoparts.api.common.pagination.PageResponse;
+import az.autoparts.api.common.storage.S3StorageService;
 import az.autoparts.api.listings.service.ListingService;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class CatalogAdminServiceImpl implements CatalogAdminService {
 
+    private static final Duration PRESIGN_TTL = Duration.ofMinutes(10);
+
     private final CategoryRepository categories;
     private final PartRepository parts;
     private final PartNumberRepository partNumbers;
     private final FitmentRepository fitments;
+    private final DiagramRepository diagrams;
+    private final DiagramCalloutRepository diagramCallouts;
+    private final VehicleVariantRepository variants;
     private final CatalogService catalogService;
     private final ListingService listingService;
+    private final S3StorageService storage;
 
     // ---------- categories ----------
 
@@ -326,6 +349,245 @@ public class CatalogAdminServiceImpl implements CatalogAdminService {
         fitments.delete(f);
     }
 
+    // ---------- diagrams ----------
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminDiagramListItem> listDiagrams(UUID categoryId) {
+        List<Diagram> source = categoryId != null
+            ? diagrams.findAllByCategoryId(categoryId)
+            : diagrams.findAll();
+        List<UUID> diagramIds = source.stream().map(Diagram::getId).toList();
+        Map<UUID, Long> calloutCounts = new HashMap<>();
+        for (UUID id : diagramIds) {
+            calloutCounts.put(id, (long) diagramCallouts.findAllByDiagramId(id).size());
+        }
+        return source.stream()
+            .map(d -> new AdminDiagramListItem(
+                d.getId(),
+                d.getSlug(),
+                d.getTitleEn(),
+                d.getCategory() == null ? null : d.getCategory().getId(),
+                d.getCategory() == null ? null : d.getCategory().getSlug(),
+                d.getImageUrl(),
+                calloutCounts.getOrDefault(d.getId(), 0L)
+            ))
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminDiagramResponse getDiagram(UUID diagramId) {
+        Diagram d = diagrams.findById(diagramId)
+            .orElseThrow(() -> new ResourceNotFoundException("Diagram not found: " + diagramId));
+        return toDiagramResponse(d);
+    }
+
+    @Override
+    @Transactional
+    public AdminDiagramResponse createDiagram(CreateDiagramRequest request) {
+        if (diagrams.findBySlug(request.slug()).isPresent()) {
+            throw new BadRequestException("Diagram slug already exists: " + request.slug());
+        }
+        if (request.categoryId() == null && request.vehicleVariantId() == null) {
+            throw new BadRequestException("At least one of categoryId or vehicleVariantId is required");
+        }
+        Category category = null;
+        if (request.categoryId() != null) {
+            category = categories.findById(request.categoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + request.categoryId()));
+        }
+        VehicleVariant variant = null;
+        if (request.vehicleVariantId() != null) {
+            variant = variants.findById(request.vehicleVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle variant not found: " + request.vehicleVariantId()));
+        }
+        Diagram saved = diagrams.save(Diagram.builder()
+            .slug(request.slug())
+            .titleAz(request.titleAz())
+            .titleRu(request.titleRu())
+            .titleEn(request.titleEn())
+            .imageUrl(request.imageUrl())
+            .imageWidth(request.imageWidth())
+            .imageHeight(request.imageHeight())
+            .category(category)
+            .vehicleVariant(variant)
+            .build());
+        return toDiagramResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public AdminDiagramResponse updateDiagram(UUID diagramId, UpdateDiagramRequest request) {
+        Diagram d = diagrams.findById(diagramId)
+            .orElseThrow(() -> new ResourceNotFoundException("Diagram not found: " + diagramId));
+        if (request.titleAz() != null && !request.titleAz().isBlank()) d.setTitleAz(request.titleAz());
+        if (request.titleRu() != null && !request.titleRu().isBlank()) d.setTitleRu(request.titleRu());
+        if (request.titleEn() != null && !request.titleEn().isBlank()) d.setTitleEn(request.titleEn());
+        if (request.imageUrl() != null && !request.imageUrl().isBlank()) d.setImageUrl(request.imageUrl());
+        if (request.imageWidth() != null) d.setImageWidth(request.imageWidth());
+        if (request.imageHeight() != null) d.setImageHeight(request.imageHeight());
+        if (request.categoryId() != null) {
+            Category category = categories.findById(request.categoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + request.categoryId()));
+            d.setCategory(category);
+        }
+        if (request.vehicleVariantId() != null) {
+            VehicleVariant variant = variants.findById(request.vehicleVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle variant not found: " + request.vehicleVariantId()));
+            d.setVehicleVariant(variant);
+        }
+        return toDiagramResponse(diagrams.save(d));
+    }
+
+    @Override
+    @Transactional
+    public void deleteDiagram(UUID diagramId) {
+        Diagram d = diagrams.findById(diagramId)
+            .orElseThrow(() -> new ResourceNotFoundException("Diagram not found: " + diagramId));
+        diagrams.delete(d);
+    }
+
+    @Override
+    @Transactional
+    public AdminCalloutEntry addCallout(UUID diagramId, CreateCalloutRequest request) {
+        Diagram d = diagrams.findById(diagramId)
+            .orElseThrow(() -> new ResourceNotFoundException("Diagram not found: " + diagramId));
+        Part part = parts.findById(request.partId())
+            .orElseThrow(() -> new ResourceNotFoundException("Part not found: " + request.partId()));
+        if (request.x() < 0 || request.x() > d.getImageWidth()
+            || request.y() < 0 || request.y() > d.getImageHeight()) {
+            throw new BadRequestException("Callout position is outside the image bounds");
+        }
+        boolean labelTaken = diagramCallouts.findAllByDiagramId(diagramId).stream()
+            .anyMatch(c -> c.getLabel().equals(request.label()));
+        if (labelTaken) {
+            throw new BadRequestException("A callout with label '" + request.label() + "' already exists");
+        }
+        DiagramCallout saved = diagramCallouts.save(DiagramCallout.builder()
+            .diagram(d)
+            .part(part)
+            .label(request.label())
+            .x(request.x())
+            .y(request.y())
+            .w(request.w())
+            .h(request.h())
+            .zOrder(request.zOrder() == null ? 0 : request.zOrder())
+            .notes(blankToNull(request.notes()))
+            .build());
+        return toCalloutEntry(saved);
+    }
+
+    @Override
+    @Transactional
+    public AdminCalloutEntry updateCallout(UUID diagramId, UUID calloutId, UpdateCalloutRequest request) {
+        DiagramCallout callout = loadOwnedCallout(diagramId, calloutId);
+        if (request.partId() != null && !request.partId().equals(callout.getPart().getId())) {
+            Part part = parts.findById(request.partId())
+                .orElseThrow(() -> new ResourceNotFoundException("Part not found: " + request.partId()));
+            callout.setPart(part);
+        }
+        if (request.label() != null && !request.label().isBlank()
+            && !request.label().equals(callout.getLabel())) {
+            boolean taken = diagramCallouts.findAllByDiagramId(diagramId).stream()
+                .anyMatch(c -> !c.getId().equals(calloutId) && c.getLabel().equals(request.label()));
+            if (taken) {
+                throw new BadRequestException("A callout with label '" + request.label() + "' already exists");
+            }
+            callout.setLabel(request.label());
+        }
+        Diagram d = callout.getDiagram();
+        if (request.x() != null) {
+            if (request.x() < 0 || request.x() > d.getImageWidth()) {
+                throw new BadRequestException("x is outside the image bounds");
+            }
+            callout.setX(request.x());
+        }
+        if (request.y() != null) {
+            if (request.y() < 0 || request.y() > d.getImageHeight()) {
+                throw new BadRequestException("y is outside the image bounds");
+            }
+            callout.setY(request.y());
+        }
+        if (request.w() != null) callout.setW(request.w() == 0 ? null : request.w());
+        if (request.h() != null) callout.setH(request.h() == 0 ? null : request.h());
+        if (request.zOrder() != null) callout.setZOrder(request.zOrder());
+        if (request.notes() != null) callout.setNotes(blankToNull(request.notes()));
+        return toCalloutEntry(diagramCallouts.save(callout));
+    }
+
+    @Override
+    @Transactional
+    public void removeCallout(UUID diagramId, UUID calloutId) {
+        DiagramCallout callout = loadOwnedCallout(diagramId, calloutId);
+        diagramCallouts.delete(callout);
+    }
+
+    private DiagramCallout loadOwnedCallout(UUID diagramId, UUID calloutId) {
+        DiagramCallout c = diagramCallouts.findById(calloutId)
+            .orElseThrow(() -> new ResourceNotFoundException("Callout not found: " + calloutId));
+        if (!c.getDiagram().getId().equals(diagramId)) {
+            throw new ResourceNotFoundException("Callout does not belong to diagram: " + diagramId);
+        }
+        return c;
+    }
+
+    private AdminDiagramResponse toDiagramResponse(Diagram d) {
+        List<AdminCalloutEntry> callouts = diagramCallouts.findAllByDiagramId(d.getId()).stream()
+            .map(this::toCalloutEntry)
+            .toList();
+        return new AdminDiagramResponse(
+            d.getId(),
+            d.getSlug(),
+            d.getTitleAz(),
+            d.getTitleRu(),
+            d.getTitleEn(),
+            d.getImageUrl(),
+            d.getImageWidth(),
+            d.getImageHeight(),
+            d.getCategory() == null ? null : d.getCategory().getId(),
+            d.getCategory() == null ? null : d.getCategory().getSlug(),
+            d.getVehicleVariant() == null ? null : d.getVehicleVariant().getId(),
+            callouts
+        );
+    }
+
+    private AdminCalloutEntry toCalloutEntry(DiagramCallout c) {
+        return new AdminCalloutEntry(
+            c.getId(),
+            c.getLabel(),
+            c.getX(),
+            c.getY(),
+            c.getW(),
+            c.getH(),
+            c.getZOrder(),
+            c.getNotes(),
+            c.getPart().getId(),
+            c.getPart().getNameEn()
+        );
+    }
+
+    // ---------- uploads ----------
+
+    @Override
+    public AdminPresignedUploadResponse presignCatalogImageUpload(String contentType) {
+        String ext = switch (contentType) {
+            case "image/jpeg" -> "jpg";
+            case "image/png" -> "png";
+            case "image/webp" -> "webp";
+            case "image/svg+xml" -> "svg";
+            default -> throw new BadRequestException("Unsupported content type: " + contentType);
+        };
+        String key = "catalog/" + UUID.randomUUID() + "." + ext;
+        var presigned = storage.presignPut(storage.catalogBucket(), key, contentType, PRESIGN_TTL);
+        return new AdminPresignedUploadResponse(
+            presigned.uploadUrl(),
+            key,
+            storage.publicUrlForCatalog(key),
+            presigned.expiresInSeconds()
+        );
+    }
+
     private Fitment loadOwnedFitment(UUID partId, UUID fitmentId) {
         Fitment f = fitments.findById(fitmentId)
             .orElseThrow(() -> new ResourceNotFoundException("Fitment not found: " + fitmentId));
@@ -344,6 +606,20 @@ public class CatalogAdminServiceImpl implements CatalogAdminService {
         List<AdminFitmentEntry> fitmentEntries = fitments.findAllByPartId(part.getId()).stream()
             .map(this::toFitmentEntry)
             .toList();
+        List<AdminPartCalloutLocation> calloutLocations = diagramCallouts.findAllByPartId(part.getId()).stream()
+            .map(c -> new AdminPartCalloutLocation(
+                c.getId(),
+                c.getDiagram().getId(),
+                c.getDiagram().getSlug(),
+                c.getDiagram().getTitleEn(),
+                c.getDiagram().getImageUrl(),
+                c.getDiagram().getImageWidth(),
+                c.getDiagram().getImageHeight(),
+                c.getLabel(),
+                c.getX(),
+                c.getY()
+            ))
+            .toList();
         return new AdminPartResponse(
             part.getId(),
             part.getCategory().getId(),
@@ -355,7 +631,8 @@ public class CatalogAdminServiceImpl implements CatalogAdminService {
             part.getDescription(),
             part.getDefaultImageUrl(),
             numberEntries,
-            fitmentEntries
+            fitmentEntries,
+            calloutLocations
         );
     }
 

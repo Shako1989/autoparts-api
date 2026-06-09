@@ -13,5 +13,6 @@ public interface DiagramCalloutRepository extends JpaRepository<DiagramCallout, 
     @EntityGraph(attributePaths = {"part", "part.category"})
     List<DiagramCallout> findAllByDiagramId(UUID diagramId);
 
+    @EntityGraph(attributePaths = {"diagram"})
     List<DiagramCallout> findAllByPartId(UUID partId);
 }
