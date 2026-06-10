@@ -28,9 +28,9 @@ public class DevOtpSender implements OtpSender {
     private final ConcurrentMap<String, Entry> cache = new ConcurrentHashMap<>();
 
     @Override
-    public void send(String phone, String code, OtpPurpose purpose) {
+    public void send(String phone, String email, String code, OtpPurpose purpose) {
         cache.put(phone, new Entry(code, Instant.now().plusSeconds(TTL_SECONDS)));
-        log.info("[DEV-OTP] {} ({}) -> {}", phone, purpose, code);
+        log.info("[DEV-OTP] {} ({}, purpose={}) -> {}", phone, email != null ? email : "no-email", purpose, code);
     }
 
     @Override

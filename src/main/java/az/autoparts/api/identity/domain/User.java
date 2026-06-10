@@ -37,6 +37,9 @@ public class User extends AuditableEntity {
     @Column(name = "full_name", length = 160)
     private String fullName;
 
+    @Column(length = 255)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role;

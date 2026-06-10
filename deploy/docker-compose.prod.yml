@@ -1,0 +1,112 @@
+# Production stack for AutoParts.az on a single Linux VM
+# (e.g. Oracle Cloud "Always Free" ARM Ampere, Hetzner CX22, DigitalOcean droplet).
+#
+# Usage:
+#   1. Copy .env.example to .env on the VM, fill in real values.
+#   2. docker compose -f docker-compose.prod.yml up -d
+#
+# All persistent state lives in named volumes — back them up regularly.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: autoparts-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: autoparts-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: autoparts-api:${API_VERSION:-latest}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: autoparts-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-autoparts-api}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-P1D}
+      ADMIN_PHONES: ${ADMIN_PHONES:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      # MinIO is reachable on the docker network at http://minio:9000
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET: autoparts
+      S3_LISTINGS_BUCKET: ${S3_LISTINGS_BUCKET:-autoparts-listings}
+      S3_LISTINGS_PUBLIC_BASE: ${S3_LISTINGS_PUBLIC_BASE}
+      S3_CATALOG_BUCKET: ${S3_CATALOG_BUCKET:-autoparts-catalog}
+      S3_CATALOG_PUBLIC_BASE: ${S3_CATALOG_PUBLIC_BASE}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      OTP_EMAIL_FROM: ${OTP_EMAIL_FROM}
+      OTP_EMAIL_SUBJECT: ${OTP_EMAIL_SUBJECT:-Your AutoParts.az verification code}
+      JAVA_OPTS: "-XX:MaxRAMPercentage=60.0 -XX:+UseG1GC"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: autoparts-caddy
+    restart: unless-stopped
+    depends_on:
+      - api
+      - minio
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      API_HOST: ${API_HOST}
+      MEDIA_HOST: ${MEDIA_HOST}
+
+volumes:
+  postgres-data:
+  minio-data:
+  caddy-data:
+  caddy-config:

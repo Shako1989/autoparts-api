@@ -46,12 +46,24 @@ class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void requestOtp(OtpRequest request) {
-        if (request.purpose() == OtpPurpose.LOGIN && !users.existsByPhone(request.phone())) {
+        String normalizedEmail = request.email() == null ? null : request.email().trim().toLowerCase();
+        User existing = users.findByPhone(request.phone()).orElse(null);
+
+        if (request.purpose() == OtpPurpose.LOGIN && existing == null) {
             throw new BadRequestException("No account for that phone — register instead");
         }
+        if (existing != null && existing.getEmail() != null && normalizedEmail != null
+            && !existing.getEmail().equalsIgnoreCase(normalizedEmail)) {
+            throw new BadRequestException("Email does not match the account on file");
+        }
+        String deliveryEmail = normalizedEmail != null
+            ? normalizedEmail
+            : (existing != null ? existing.getEmail() : null);
+
         String code = generateCode();
         OtpCode entry = OtpCode.builder()
             .phone(request.phone())
+            .email(deliveryEmail)
             .codeHash(encoder.encode(code))
             .purpose(request.purpose())
             .expiresAt(Instant.now().plusSeconds(EXPIRES_IN_SECONDS))
@@ -59,7 +71,7 @@ class AuthServiceImpl implements AuthService {
             .createdAt(Instant.now())
             .build();
         otps.save(entry);
-        otpSender.send(request.phone(), code, request.purpose());
+        otpSender.send(request.phone(), deliveryEmail, code, request.purpose());
     }
 
     @Override
@@ -85,12 +97,16 @@ class AuthServiceImpl implements AuthService {
         User user = users.findByPhone(request.phone()).orElseGet(() -> users.save(
             User.builder()
                 .phone(request.phone())
+                .email(entry.getEmail())
                 .fullName(request.fullName())
                 .role(Role.BUYER)
                 .enabled(true)
                 .build()));
         if (user.getFullName() == null && request.fullName() != null && !request.fullName().isBlank()) {
             user.setFullName(request.fullName());
+        }
+        if (user.getEmail() == null && entry.getEmail() != null) {
+            user.setEmail(entry.getEmail());
         }
         if (user.getRole() == Role.BUYER && adminBootstrap.isAllowlisted(user.getPhone())) {
             user.setRole(Role.STAFF);
@@ -117,7 +133,9 @@ class AuthServiceImpl implements AuthService {
 
     private MeResponse toMe(User user) {
         boolean hasProfile = sellers.findByUserId(user.getId()).isPresent();
-        return new MeResponse(user.getId(), user.getPhone(), user.getFullName(), user.getRole(), hasProfile);
+        return new MeResponse(
+            user.getId(), user.getPhone(), user.getEmail(),
+            user.getFullName(), user.getRole(), hasProfile);
     }
 
     private String generateCode() {

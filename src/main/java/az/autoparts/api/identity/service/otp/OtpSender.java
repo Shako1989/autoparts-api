@@ -4,7 +4,15 @@ import az.autoparts.api.identity.domain.OtpPurpose;
 
 public interface OtpSender {
 
-    void send(String phone, String code, OtpPurpose purpose);
+    /**
+     * Deliver the OTP code to the user.
+     *
+     * @param phone   user's phone (E.164). Always present.
+     * @param email   user's email if known; may be null in dev profiles.
+     * @param code    the plaintext 6-digit code.
+     * @param purpose REGISTER or LOGIN.
+     */
+    void send(String phone, String email, String code, OtpPurpose purpose);
 
     /**
      * Local-dev only convenience: read back the latest unconsumed plaintext code

@@ -1,0 +1,24 @@
+# Caddy reverse proxy with auto-TLS via Let's Encrypt.
+# Both vhosts get a free, auto-renewed cert as long as the DNS A/AAAA records
+# point at this server's public IP.
+
+# API
+{$API_HOST} {
+    encode zstd gzip
+    reverse_proxy api:8080 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+    }
+}
+
+# MinIO public-read media (catalog images, listing photos, diagram images).
+# Only GET/HEAD is exposed publicly; upload still uses presigned URLs via the
+# API, which are signed for the internal endpoint.
+{$MEDIA_HOST} {
+    encode zstd gzip
+    @methods method GET HEAD
+    handle @methods {
+        reverse_proxy minio:9000
+    }
+    respond 405
+}
