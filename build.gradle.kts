@@ -61,6 +61,9 @@ dependencies {
 	// Lombok
 	compileOnly("org.projectlombok:lombok")
 	annotationProcessor("org.projectlombok:lombok")
+	// Required so MapStruct can see Lombok-generated getters during a clean
+	// annotation-processor run (e.g. inside Docker, no Gradle daemon cache).
+	annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
 
 	// Runtime DB driver
 	runtimeOnly("org.postgresql:postgresql")

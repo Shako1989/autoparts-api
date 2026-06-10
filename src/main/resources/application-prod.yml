@@ -45,6 +45,17 @@ app:
       from: ${OTP_EMAIL_FROM:no-reply@autoparts.az}
       subject: ${OTP_EMAIL_SUBJECT:Your AutoParts.az verification code}
 
+management:
+  health:
+    # Redis is on the classpath but unused in v1 — exclude from /actuator/health.
+    redis:
+      enabled: false
+    # JavaMailSender's health check opens an SMTP connection on every probe,
+    # which is wasteful (and Brevo may rate-limit). The send path errors loudly
+    # on its own if SMTP is broken.
+    mail:
+      enabled: false
+
 logging:
   level:
     root: INFO

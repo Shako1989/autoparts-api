@@ -1,0 +1,78 @@
+# Local smoke test of the production stack. Uses distinct container names
+# and a non-standard host port (18080) so it can run alongside the dev stack
+# without conflicts. SMTP points at the existing autoparts-mailhog (no real
+# Brevo creds needed — read the OTP email from http://localhost:8025).
+
+services:
+  smoke-postgres:
+    image: postgres:16-alpine
+    container_name: smoke-postgres
+    restart: "no"
+    environment:
+      POSTGRES_DB: autoparts
+      POSTGRES_USER: autoparts
+      POSTGRES_PASSWORD: smoke
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "autoparts"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  smoke-minio:
+    image: minio/minio:latest
+    container_name: smoke-minio
+    restart: "no"
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: smokeadmin
+      MINIO_ROOT_PASSWORD: smokeadminpass
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  smoke-api:
+    image: autoparts-api:smoke
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: smoke-api
+    restart: "no"
+    depends_on:
+      smoke-postgres:
+        condition: service_healthy
+      smoke-minio:
+        condition: service_healthy
+    ports:
+      - "18080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://smoke-postgres:5432/autoparts
+      DB_USERNAME: autoparts
+      DB_PASSWORD: smoke
+      REDIS_HOST: smoke-redis-not-needed
+      JWT_SECRET: "smoke-test-secret-not-for-prod-must-be-32-chars-long"
+      JWT_ISSUER: autoparts-api-smoke
+      JWT_ACCESS_TTL: PT1H
+      ADMIN_PHONES: "+994501234567"
+      CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:18080"
+      S3_ENDPOINT: http://smoke-minio:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: smokeadmin
+      S3_SECRET_KEY: smokeadminpass
+      S3_BUCKET: autoparts
+      S3_LISTINGS_BUCKET: autoparts-listings
+      S3_LISTINGS_PUBLIC_BASE: http://localhost:9000/autoparts-listings
+      S3_CATALOG_BUCKET: autoparts-catalog
+      S3_CATALOG_PUBLIC_BASE: http://localhost:9000/autoparts-catalog
+      SMTP_HOST: host.docker.internal
+      SMTP_PORT: "1025"
+      SMTP_USERNAME: smoke
+      SMTP_PASSWORD: smoke
+      OTP_EMAIL_FROM: smoke@autoparts.local
+      OTP_EMAIL_SUBJECT: "[smoke] Your code"
+      # MailHog doesn't support auth or STARTTLS — override the prod defaults.
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "false"
+      JAVA_OPTS: "-XX:MaxRAMPercentage=60.0"
