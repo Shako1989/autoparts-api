@@ -26,6 +26,9 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // CORS preflight: let the CorsFilter answer OPTIONS on any path
+                // before Spring Security rejects anonymous requests on protected paths.
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/catalog/**").permitAll()
                 .requestMatchers("/api/v1/search").permitAll()
