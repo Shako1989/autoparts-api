@@ -11,13 +11,18 @@
     }
 }
 
-# MinIO public-read media (catalog images, listing photos, diagram images).
-# Only GET/HEAD is exposed publicly; upload still uses presigned URLs via the
-# API, which are signed for the internal endpoint.
+# MinIO public-read media + presigned uploads.
+#
+# GET / HEAD are anonymous reads (bucket policy makes objects public).
+#
+# PUT is the upload path for browser-initiated presigned uploads. MinIO
+# validates the SigV4 signature on the request itself, so even though Caddy
+# proxies anonymously, only requests carrying a valid presigned signature
+# from our API can write. Other methods are rejected.
 {$MEDIA_HOST} {
     encode zstd gzip
-    @methods method GET HEAD
-    handle @methods {
+    @rw method GET HEAD PUT
+    handle @rw {
         reverse_proxy minio:9000
     }
     respond 405

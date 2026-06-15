@@ -30,8 +30,14 @@ public class S3Config {
 
     @Bean
     S3Presigner s3Presigner(S3Properties props) {
+        // The presigner bakes the endpoint into the signed URL. In production
+        // this needs to be a host the browser can reach (cdn.bakuparts.com)
+        // rather than the internal docker hostname (minio:9000).
+        String presignerEndpoint = props.publicEndpoint() != null && !props.publicEndpoint().isBlank()
+            ? props.publicEndpoint()
+            : props.endpoint();
         return S3Presigner.builder()
-            .endpointOverride(URI.create(props.endpoint()))
+            .endpointOverride(URI.create(presignerEndpoint))
             .region(Region.of(props.region()))
             .credentialsProvider(StaticCredentialsProvider.create(
                 AwsBasicCredentials.create(props.accessKey(), props.secretKey())))
