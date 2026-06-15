@@ -19,11 +19,35 @@
 # validates the SigV4 signature on the request itself, so even though Caddy
 # proxies anonymously, only requests carrying a valid presigned signature
 # from our API can write. Other methods are rejected.
+#
+# CORS: presigned uploads come from the React frontend on bakuparts.com /
+# www.bakuparts.com. Caddy answers the OPTIONS preflight and injects the
+# Access-Control-* response headers on all responses so the browser can
+# read the result.
 {$MEDIA_HOST} {
     encode zstd gzip
+
+    # Reflect the Origin header on matching frontend origins.
+    @allowed_origin header_regexp Origin ^https://(www\.)?bakuparts\.com$
+    header @allowed_origin {
+        Access-Control-Allow-Origin {http.request.header.Origin}
+        Access-Control-Allow-Methods "GET, HEAD, PUT, OPTIONS"
+        Access-Control-Allow-Headers "*"
+        Access-Control-Expose-Headers "ETag"
+        Access-Control-Max-Age "3600"
+        Vary "Origin"
+    }
+
+    # Preflight: respond immediately, no need to bother MinIO.
+    @preflight method OPTIONS
+    handle @preflight {
+        respond 204
+    }
+
     @rw method GET HEAD PUT
     handle @rw {
         reverse_proxy minio:9000
     }
+
     respond 405
 }
