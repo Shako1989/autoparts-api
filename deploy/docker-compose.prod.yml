@@ -33,6 +33,12 @@ services:
     container_name: autoparts-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
+    # Bind to 127.0.0.1 only — S3 API + console reachable from the VM's
+    # loopback (and so via SSH tunnel) but NOT from the public internet.
+    # Public read access to buckets is served via Caddy on cdn.bakuparts.com.
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
