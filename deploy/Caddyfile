@@ -46,7 +46,20 @@
 
     @rw method GET HEAD PUT
     handle @rw {
-        reverse_proxy minio:9000
+        reverse_proxy minio:9000 {
+            # SigV4 signs the Host header — pass it through so MinIO sees
+            # the same hostname the presigner used (cdn.bakuparts.com),
+            # not the docker-internal minio:9000.
+            header_up Host {host}
+            # Strip any CORS headers MinIO might emit so Caddy is the
+            # single source of CORS truth (avoids "multiple values" errors).
+            header_down -Access-Control-Allow-Origin
+            header_down -Access-Control-Allow-Methods
+            header_down -Access-Control-Allow-Headers
+            header_down -Access-Control-Expose-Headers
+            header_down -Access-Control-Max-Age
+            header_down -Vary
+        }
     }
 
     respond 405
