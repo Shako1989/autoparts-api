@@ -2,6 +2,7 @@ package az.autoparts.api.identity.service.otp;
 
 import java.util.Optional;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.mail.SimpleMailMessage;
@@ -41,6 +42,22 @@ public class SmtpOtpSender implements OtpSender {
     @Value("${app.otp.email.subject:Your AutoParts.az verification code}")
     private String subject;
 
+    /**
+     * If true, log the plaintext OTP code alongside the send-success line.
+     * Off by default. Enable only for short-term dev/debugging; logged OTPs
+     * are a credential leak risk if logs are ever shipped to a third party.
+     */
+    @Value("${app.otp.log-plaintext:false}")
+    private boolean logPlaintext;
+
+    @PostConstruct
+    void warnIfPlaintextLogging() {
+        if (logPlaintext) {
+            log.warn("OTP plaintext logging is ENABLED (app.otp.log-plaintext=true). "
+                + "Disable before production launch — anyone with log access can hijack accounts.");
+        }
+    }
+
     @Override
     public void send(String phone, String email, String code, OtpPurpose purpose) {
         if (email == null || email.isBlank()) {
@@ -54,7 +71,11 @@ public class SmtpOtpSender implements OtpSender {
         msg.setText(body(code, purpose));
         try {
             mailSender.send(msg);
-            log.info("Sent {} OTP to {}", purpose, mask(email));
+            if (logPlaintext) {
+                log.info("Sent {} OTP to {} — code={}", purpose, mask(email), code);
+            } else {
+                log.info("Sent {} OTP to {}", purpose, mask(email));
+            }
         } catch (Exception e) {
             log.error("Failed to send OTP to {}: {}", mask(email), e.getMessage());
             throw new BadRequestException("Could not deliver the code. Try again in a moment.");

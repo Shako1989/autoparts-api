@@ -45,6 +45,11 @@ app:
     email:
       from: ${OTP_EMAIL_FROM:no-reply@autoparts.az}
       subject: ${OTP_EMAIL_SUBJECT:Your AutoParts.az verification code}
+    # Set OTP_LOG_PLAINTEXT=true in .env to also write the OTP code to
+    # the API container's stdout. Useful for short-term debugging when
+    # email delivery is flaky. NEVER leave on at real-launch time —
+    # anyone with log access could hijack accounts.
+    log-plaintext: ${OTP_LOG_PLAINTEXT:false}
 
 management:
   health:
