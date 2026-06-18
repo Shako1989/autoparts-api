@@ -4,8 +4,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -48,23 +46,5 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    /**
-     * Role hierarchy: a higher-privilege role implicitly satisfies all lower-privilege
-     * checks. So a STAFF user can use any endpoint marked @PreAuthorize("hasRole('SELLER')"),
-     * which is the right model for the platform's own admins (they need to be able to
-     * exercise the seller flow, e.g. for support / debugging / dogfooding).
-     *
-     * Spring Security 6 picks this bean up automatically for both URL-level and
-     * method-level (@PreAuthorize) authorization.
-     */
-    @Bean
-    RoleHierarchy roleHierarchy() {
-        return RoleHierarchyImpl.fromHierarchy("""
-            ROLE_ADMIN > ROLE_STAFF
-            ROLE_STAFF > ROLE_SELLER
-            ROLE_SELLER > ROLE_BUYER
-            """);
     }
 }
