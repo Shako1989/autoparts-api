@@ -3,12 +3,18 @@ package az.autoparts.api.common.error;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -65,9 +71,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(pd);
     }
 
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleAuthDenied(AuthorizationDeniedException ex, HttpServletRequest req) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String principal = auth == null ? "<anonymous>" : String.valueOf(auth.getPrincipal());
+        String authorities = auth == null ? "<none>"
+            : auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.joining(","));
+        log.warn("403 access denied: {} {} principal={} authorities=[{}]",
+            req.getMethod(), req.getRequestURI(), principal, authorities);
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Access denied");
+        pd.setType(URI.create("https://autoparts.az/problems/forbidden"));
+        pd.setTitle("Forbidden");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(pd);
+    }
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ProblemDetail> handleUnknown(Exception ex) {
-        log.error("Unhandled exception", ex);
+    public ResponseEntity<ProblemDetail> handleUnknown(Exception ex, HttpServletRequest req) {
+        log.error("Unhandled exception on {} {}", req.getMethod(), req.getRequestURI(), ex);
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
         pd.setType(URI.create("https://autoparts.az/problems/internal"));
         pd.setTitle("Internal server error");
