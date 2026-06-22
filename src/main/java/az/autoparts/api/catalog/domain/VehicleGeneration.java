@@ -5,8 +5,6 @@ import java.util.UUID;
 import az.autoparts.api.common.auditing.AuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -22,10 +20,10 @@ import lombok.Setter;
 
 @Entity
 @Table(
-    name = "vehicle_variants",
+    name = "vehicle_generations",
     uniqueConstraints = @UniqueConstraint(
-        name = "uq_vehicle_variants",
-        columnNames = {"generation_id", "year", "trim", "engine_code"}
+        name = "uq_vehicle_generations_model_slug",
+        columnNames = {"model_id", "slug"}
     )
 )
 @Getter
@@ -33,29 +31,29 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class VehicleVariant extends AuditableEntity {
+public class VehicleGeneration extends AuditableEntity {
 
     @Id
     @GeneratedValue
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "generation_id", nullable = false)
-    private VehicleGeneration generation;
+    @JoinColumn(name = "model_id", nullable = false)
+    private VehicleModel model;
 
-    @Column(nullable = false)
-    private short year;
+    /** Manufacturer's chassis/generation code (E90, F30, Mk7). Nullable. */
+    @Column(length = 40)
+    private String code;
 
-    @Column(length = 120)
-    private String trim;
+    @Column(nullable = false, length = 120)
+    private String name;
 
-    @Column(name = "engine_code", length = 60)
-    private String engineCode;
+    @Column(nullable = false, length = 120)
+    private String slug;
 
-    @Column(name = "body_type", length = 40)
-    private String bodyType;
+    @Column(name = "year_from", nullable = false)
+    private short yearFrom;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private FuelType fuel;
+    @Column(name = "year_to")
+    private Short yearTo;
 }

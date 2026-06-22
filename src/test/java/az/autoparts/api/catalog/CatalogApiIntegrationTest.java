@@ -38,7 +38,9 @@ import az.autoparts.api.catalog.repo.PartNumberRepository;
 import az.autoparts.api.catalog.repo.PartRepository;
 import az.autoparts.api.catalog.repo.VehicleMakeRepository;
 import az.autoparts.api.catalog.repo.VehicleModelRepository;
+import az.autoparts.api.catalog.repo.VehicleGenerationRepository;
 import az.autoparts.api.catalog.repo.VehicleVariantRepository;
+import az.autoparts.api.catalog.domain.VehicleGeneration;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -67,6 +69,7 @@ class CatalogApiIntegrationTest {
 
     @Autowired VehicleMakeRepository makes;
     @Autowired VehicleModelRepository models;
+    @Autowired VehicleGenerationRepository generations;
     @Autowired VehicleVariantRepository variants;
     @Autowired CategoryRepository categories;
     @Autowired PartRepository parts;
@@ -88,6 +91,7 @@ class CatalogApiIntegrationTest {
         parts.deleteAll();
         categories.deleteAll();
         variants.deleteAll();
+        generations.deleteAll();
         models.deleteAll();
         makes.deleteAll();
 
@@ -98,8 +102,11 @@ class CatalogApiIntegrationTest {
             .make(hyundai).name("Sonata").slug("sonata").yearFrom((short) 2010).yearTo((short) 2019).build());
         modelSonataId = sonata.getId();
 
+        VehicleGeneration sonataGen = generations.save(VehicleGeneration.builder()
+            .model(sonata).name("Sonata").slug("gen").yearFrom((short) 2010).yearTo((short) 2019).build());
+
         VehicleVariant sonata2014 = variants.save(VehicleVariant.builder()
-            .model(sonata).year((short) 2014).trim("Sport").engineCode("G4KH").bodyType("sedan").fuel(FuelType.PETROL)
+            .generation(sonataGen).year((short) 2014).trim("Sport").engineCode("G4KH").bodyType("sedan").fuel(FuelType.PETROL)
             .build());
         variantSonataId = sonata2014.getId();
 

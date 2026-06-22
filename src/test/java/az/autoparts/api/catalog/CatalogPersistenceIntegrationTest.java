@@ -22,6 +22,7 @@ import az.autoparts.api.catalog.domain.FuelType;
 import az.autoparts.api.catalog.domain.Part;
 import az.autoparts.api.catalog.domain.PartNumber;
 import az.autoparts.api.catalog.domain.PartNumberType;
+import az.autoparts.api.catalog.domain.VehicleGeneration;
 import az.autoparts.api.catalog.domain.VehicleMake;
 import az.autoparts.api.catalog.domain.VehicleModel;
 import az.autoparts.api.catalog.domain.VehicleVariant;
@@ -29,6 +30,7 @@ import az.autoparts.api.catalog.repo.CategoryRepository;
 import az.autoparts.api.catalog.repo.FitmentRepository;
 import az.autoparts.api.catalog.repo.PartNumberRepository;
 import az.autoparts.api.catalog.repo.PartRepository;
+import az.autoparts.api.catalog.repo.VehicleGenerationRepository;
 import az.autoparts.api.catalog.repo.VehicleMakeRepository;
 import az.autoparts.api.catalog.repo.VehicleModelRepository;
 import az.autoparts.api.catalog.repo.VehicleVariantRepository;
@@ -60,6 +62,7 @@ class CatalogPersistenceIntegrationTest {
 
     @Autowired VehicleMakeRepository makes;
     @Autowired VehicleModelRepository models;
+    @Autowired VehicleGenerationRepository generations;
     @Autowired VehicleVariantRepository variants;
     @Autowired CategoryRepository categories;
     @Autowired PartRepository parts;
@@ -75,8 +78,12 @@ class CatalogPersistenceIntegrationTest {
         VehicleModel sonata = models.save(VehicleModel.builder()
             .make(hyundai).name("Sonata").slug("sonata").yearFrom((short) 2010).yearTo((short) 2019).build());
 
+        VehicleGeneration sonataGen = generations.save(VehicleGeneration.builder()
+            .model(sonata).name("Sonata").slug("gen")
+            .yearFrom((short) 2010).yearTo((short) 2019).build());
+
         VehicleVariant variant = variants.save(VehicleVariant.builder()
-            .model(sonata).year((short) 2014).trim("Sport").engineCode("G4KH").bodyType("sedan").fuel(FuelType.PETROL).build());
+            .generation(sonataGen).year((short) 2014).trim("Sport").engineCode("G4KH").bodyType("sedan").fuel(FuelType.PETROL).build());
 
         em.flush();
         em.clear();
@@ -84,6 +91,7 @@ class CatalogPersistenceIntegrationTest {
         assertThat(makes.findBySlug("hyundai")).isPresent();
         assertThat(models.findByMakeIdAndSlug(hyundai.getId(), "sonata")).isPresent();
         assertThat(variants.findDistinctYearsByModelId(sonata.getId())).containsExactly((short) 2014);
+        assertThat(variants.findDistinctYearsByGenerationId(sonataGen.getId())).containsExactly((short) 2014);
         assertThat(variants.findById(variant.getId())).isPresent();
     }
 
@@ -132,7 +140,9 @@ class CatalogPersistenceIntegrationTest {
     void fitment_links_part_to_variant() {
         VehicleMake make = makes.save(VehicleMake.builder().name("Kia").slug("kia").build());
         VehicleModel model = models.save(VehicleModel.builder().make(make).name("Optima").slug("optima").yearFrom((short) 2011).build());
-        VehicleVariant variant = variants.save(VehicleVariant.builder().model(model).year((short) 2014).fuel(FuelType.PETROL).build());
+        VehicleGeneration gen = generations.save(VehicleGeneration.builder()
+            .model(model).name("Optima").slug("gen").yearFrom((short) 2011).build());
+        VehicleVariant variant = variants.save(VehicleVariant.builder().generation(gen).year((short) 2014).fuel(FuelType.PETROL).build());
 
         Category cat = categories.save(Category.builder()
             .slug("brake-pads-fit").nameAz("X").nameRu("X").nameEn("X").sortOrder(0).build());
@@ -144,7 +154,7 @@ class CatalogPersistenceIntegrationTest {
 
         List<Fitment> byPart = fitments.findAllByPartId(part.getId());
         assertThat(byPart).hasSize(1);
-        assertThat(byPart.get(0).getVehicleVariant().getModel().getMake().getSlug()).isEqualTo("kia");
+        assertThat(byPart.get(0).getVehicleVariant().getGeneration().getModel().getMake().getSlug()).isEqualTo("kia");
     }
 
     @Test

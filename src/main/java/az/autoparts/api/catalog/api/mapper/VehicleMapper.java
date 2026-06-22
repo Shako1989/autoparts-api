@@ -3,9 +3,11 @@ package az.autoparts.api.catalog.api.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import az.autoparts.api.catalog.api.dto.VehicleGenerationResponse;
 import az.autoparts.api.catalog.api.dto.VehicleMakeResponse;
 import az.autoparts.api.catalog.api.dto.VehicleModelResponse;
 import az.autoparts.api.catalog.api.dto.VehicleVariantResponse;
+import az.autoparts.api.catalog.domain.VehicleGeneration;
 import az.autoparts.api.catalog.domain.VehicleMake;
 import az.autoparts.api.catalog.domain.VehicleModel;
 import az.autoparts.api.catalog.domain.VehicleVariant;
@@ -19,5 +21,9 @@ public interface VehicleMapper {
     VehicleModelResponse toModelResponse(VehicleModel model);
 
     @Mapping(target = "modelId", source = "model.id")
+    VehicleGenerationResponse toGenerationResponse(VehicleGeneration generation);
+
+    @Mapping(target = "generationId", source = "generation.id")
+    @Mapping(target = "modelId", source = "generation.model.id")
     VehicleVariantResponse toVariantResponse(VehicleVariant variant);
 }

@@ -31,8 +31,8 @@ public interface DiagramRepository extends JpaRepository<Diagram, UUID> {
              select 1 from DiagramCallout dc
              join Fitment f on f.part.id = dc.part.id
              where dc.diagram.id = d.id
-               and f.vehicleVariant.model.make.slug = :makeSlug
-               and f.vehicleVariant.model.slug = :modelSlug
+               and f.vehicleVariant.generation.model.make.slug = :makeSlug
+               and f.vehicleVariant.generation.model.slug = :modelSlug
                and f.vehicleVariant.year = :year
            )
         """)

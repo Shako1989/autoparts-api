@@ -20,6 +20,7 @@ import az.autoparts.api.catalog.api.dto.FitmentResponse;
 import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
 import az.autoparts.api.catalog.api.dto.PartSummary;
+import az.autoparts.api.catalog.api.dto.VehicleGenerationResponse;
 import az.autoparts.api.catalog.api.dto.VehicleMakeResponse;
 import az.autoparts.api.catalog.api.dto.VehicleModelResponse;
 import az.autoparts.api.catalog.api.dto.VehicleVariantResponse;
@@ -46,6 +47,7 @@ import az.autoparts.api.catalog.repo.DiagramRepository;
 import az.autoparts.api.catalog.repo.FitmentRepository;
 import az.autoparts.api.catalog.repo.PartNumberRepository;
 import az.autoparts.api.catalog.repo.PartRepository;
+import az.autoparts.api.catalog.repo.VehicleGenerationRepository;
 import az.autoparts.api.catalog.repo.VehicleMakeRepository;
 import az.autoparts.api.catalog.repo.VehicleModelRepository;
 import az.autoparts.api.catalog.repo.VehicleVariantRepository;
@@ -60,6 +62,7 @@ class CatalogServiceImpl implements CatalogService {
 
     private final VehicleMakeRepository makes;
     private final VehicleModelRepository models;
+    private final VehicleGenerationRepository generations;
     private final VehicleVariantRepository variants;
     private final CategoryRepository categories;
     private final PartRepository parts;
@@ -90,6 +93,16 @@ class CatalogServiceImpl implements CatalogService {
     }
 
     @Override
+    public List<VehicleGenerationResponse> listGenerations(UUID modelId) {
+        if (!models.existsById(modelId)) {
+            throw new ResourceNotFoundException("Vehicle model not found: " + modelId);
+        }
+        return generations.findAllByModelIdOrderByYearFromAsc(modelId).stream()
+            .map(vehicleMapper::toGenerationResponse)
+            .toList();
+    }
+
+    @Override
     public List<Short> listYears(UUID modelId) {
         if (!models.existsById(modelId)) {
             throw new ResourceNotFoundException("Vehicle model not found: " + modelId);
@@ -98,11 +111,29 @@ class CatalogServiceImpl implements CatalogService {
     }
 
     @Override
+    public List<Short> listYearsByGeneration(UUID generationId) {
+        if (!generations.existsById(generationId)) {
+            throw new ResourceNotFoundException("Vehicle generation not found: " + generationId);
+        }
+        return variants.findDistinctYearsByGenerationId(generationId);
+    }
+
+    @Override
     public List<VehicleVariantResponse> listVariants(UUID modelId, short year) {
         if (!models.existsById(modelId)) {
             throw new ResourceNotFoundException("Vehicle model not found: " + modelId);
         }
         return variants.findAllByModelIdAndYearOrderByTrimAsc(modelId, year).stream()
+            .map(vehicleMapper::toVariantResponse)
+            .toList();
+    }
+
+    @Override
+    public List<VehicleVariantResponse> listVariantsByGeneration(UUID generationId, short year) {
+        if (!generations.existsById(generationId)) {
+            throw new ResourceNotFoundException("Vehicle generation not found: " + generationId);
+        }
+        return variants.findAllByGenerationIdAndYearOrderByTrimAsc(generationId, year).stream()
             .map(vehicleMapper::toVariantResponse)
             .toList();
     }

@@ -5,25 +5,64 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import az.autoparts.api.catalog.domain.VehicleVariant;
 
 public interface VehicleVariantRepository extends JpaRepository<VehicleVariant, UUID> {
 
-    List<VehicleVariant> findAllByModelIdAndYearOrderByTrimAsc(UUID modelId, short year);
-
-    @Query("select distinct v.year from VehicleVariant v where v.model.id = :modelId order by v.year")
-    List<Short> findDistinctYearsByModelId(UUID modelId);
+    // Generation-scoped queries — preferred for new code (matches the
+    // canonical Make → Model → Generation → Year → Variant flow).
 
     @Query("""
         select v from VehicleVariant v
-         where v.model.make.slug = :makeSlug
-           and v.model.slug = :modelSlug
+         where v.generation.id = :generationId
+           and v.year = :year
+         order by v.trim asc
+        """)
+    List<VehicleVariant> findAllByGenerationIdAndYearOrderByTrimAsc(
+        @Param("generationId") UUID generationId,
+        @Param("year") short year
+    );
+
+    @Query("""
+        select distinct v.year from VehicleVariant v
+         where v.generation.id = :generationId
+         order by v.year
+        """)
+    List<Short> findDistinctYearsByGenerationId(@Param("generationId") UUID generationId);
+
+    // Model-scoped queries — aggregate across all generations of the model.
+    // Used by the legacy /years and /variants?model=... endpoints, and by
+    // fitments creation where the caller doesn't pick a specific generation.
+
+    @Query("""
+        select v from VehicleVariant v
+         where v.generation.model.id = :modelId
+           and v.year = :year
+         order by v.trim asc
+        """)
+    List<VehicleVariant> findAllByModelIdAndYearOrderByTrimAsc(
+        @Param("modelId") UUID modelId,
+        @Param("year") short year
+    );
+
+    @Query("""
+        select distinct v.year from VehicleVariant v
+         where v.generation.model.id = :modelId
+         order by v.year
+        """)
+    List<Short> findDistinctYearsByModelId(@Param("modelId") UUID modelId);
+
+    @Query("""
+        select v from VehicleVariant v
+         where v.generation.model.make.slug = :makeSlug
+           and v.generation.model.slug = :modelSlug
            and v.year = :year
         """)
     List<VehicleVariant> findAllByMakeSlugAndModelSlugAndYear(
-        @org.springframework.data.repository.query.Param("makeSlug") String makeSlug,
-        @org.springframework.data.repository.query.Param("modelSlug") String modelSlug,
-        @org.springframework.data.repository.query.Param("year") short year
+        @Param("makeSlug") String makeSlug,
+        @Param("modelSlug") String modelSlug,
+        @Param("year") short year
     );
 }

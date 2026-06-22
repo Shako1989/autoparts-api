@@ -28,8 +28,8 @@ public interface PartRepository extends JpaRepository<Part, UUID> {
            and exists (
              select 1 from Fitment f
               where f.part.id = p.id
-                and f.vehicleVariant.model.make.slug = :makeSlug
-                and f.vehicleVariant.model.slug = :modelSlug
+                and f.vehicleVariant.generation.model.make.slug = :makeSlug
+                and f.vehicleVariant.generation.model.slug = :modelSlug
                 and f.vehicleVariant.year = :year
            )
         """)

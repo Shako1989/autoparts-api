@@ -231,8 +231,9 @@ public class CatalogAdminServiceImpl implements CatalogAdminService {
         Map<UUID, LinkedHashSet<String>> deduped = new HashMap<>();
         for (Fitment f : fitments.findAllByPartIdIn(partIds)) {
             var v = f.getVehicleVariant();
-            String label = v.getModel().getMake().getName() + " "
-                + v.getModel().getName() + " "
+            var model = v.getGeneration().getModel();
+            String label = model.getMake().getName() + " "
+                + model.getName() + " "
                 + v.getYear();
             deduped.computeIfAbsent(f.getPart().getId(), k -> new LinkedHashSet<>()).add(label);
         }
@@ -638,11 +639,12 @@ public class CatalogAdminServiceImpl implements CatalogAdminService {
 
     private AdminFitmentEntry toFitmentEntry(Fitment f) {
         var variant = f.getVehicleVariant();
+        var model = variant.getGeneration().getModel();
         return new AdminFitmentEntry(
             f.getId(),
             variant.getId(),
-            variant.getModel().getMake().getName(),
-            variant.getModel().getName(),
+            model.getMake().getName(),
+            model.getName(),
             variant.getYear(),
             variant.getTrim(),
             variant.getEngineCode(),

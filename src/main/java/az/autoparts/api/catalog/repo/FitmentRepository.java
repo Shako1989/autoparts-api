@@ -10,10 +10,10 @@ import az.autoparts.api.catalog.domain.Fitment;
 
 public interface FitmentRepository extends JpaRepository<Fitment, UUID> {
 
-    @EntityGraph(attributePaths = {"vehicleVariant", "vehicleVariant.model", "vehicleVariant.model.make"})
+    @EntityGraph(attributePaths = {"vehicleVariant", "vehicleVariant.generation", "vehicleVariant.generation.model", "vehicleVariant.generation.model.make"})
     List<Fitment> findAllByPartId(UUID partId);
 
-    @EntityGraph(attributePaths = {"vehicleVariant", "vehicleVariant.model", "vehicleVariant.model.make"})
+    @EntityGraph(attributePaths = {"vehicleVariant", "vehicleVariant.generation", "vehicleVariant.generation.model", "vehicleVariant.generation.model.make"})
     List<Fitment> findAllByPartIdIn(java.util.Collection<UUID> partIds);
 
     List<Fitment> findAllByVehicleVariantId(UUID vehicleVariantId);

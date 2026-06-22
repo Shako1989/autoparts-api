@@ -13,6 +13,7 @@ import az.autoparts.api.catalog.api.dto.FitmentResponse;
 import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
 import az.autoparts.api.catalog.api.dto.PartSummary;
+import az.autoparts.api.catalog.api.dto.VehicleGenerationResponse;
 import az.autoparts.api.catalog.api.dto.VehicleMakeResponse;
 import az.autoparts.api.catalog.api.dto.VehicleModelResponse;
 import az.autoparts.api.catalog.api.dto.VehicleVariantResponse;
@@ -29,9 +30,20 @@ public interface CatalogService {
 
     List<VehicleModelResponse> listModels(String makeSlug);
 
+    /** Generations for a model. Each model has at least one default generation. */
+    List<VehicleGenerationResponse> listGenerations(UUID modelId);
+
+    /** Aggregated years across all generations of a model (legacy aggregator). */
     List<Short> listYears(UUID modelId);
 
+    /** Years for a specific generation. Preferred over listYears(modelId). */
+    List<Short> listYearsByGeneration(UUID generationId);
+
+    /** Variants across all generations of a model for a given year (legacy). */
     List<VehicleVariantResponse> listVariants(UUID modelId, short year);
+
+    /** Variants for a specific generation + year. Preferred. */
+    List<VehicleVariantResponse> listVariantsByGeneration(UUID generationId, short year);
 
     List<CategoryResponse> getCategoryTree(Locale locale);
 

@@ -9,6 +9,7 @@ import az.autoparts.api.catalog.api.dto.PartResponse.PartNumberEntry;
 import az.autoparts.api.catalog.domain.Fitment;
 import az.autoparts.api.catalog.domain.Part;
 import az.autoparts.api.catalog.domain.PartNumber;
+import az.autoparts.api.catalog.domain.VehicleModel;
 import az.autoparts.api.catalog.domain.VehicleVariant;
 import az.autoparts.api.common.locale.Locale;
 
@@ -45,12 +46,13 @@ public class PartMapper {
 
     public FitmentResponse toFitmentResponse(Fitment fitment) {
         VehicleVariant variant = fitment.getVehicleVariant();
+        VehicleModel model = variant.getGeneration().getModel();
         return new FitmentResponse(
             fitment.getId(),
             fitment.getPart().getId(),
             variant.getId(),
-            variant.getModel().getMake().getName(),
-            variant.getModel().getName(),
+            model.getMake().getName(),
+            model.getName(),
             variant.getYear(),
             variant.getTrim(),
             variant.getEngineCode(),

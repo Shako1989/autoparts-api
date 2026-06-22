@@ -13,6 +13,7 @@ import az.autoparts.api.catalog.domain.FuelType;
 import az.autoparts.api.catalog.domain.Part;
 import az.autoparts.api.catalog.domain.PartNumber;
 import az.autoparts.api.catalog.domain.PartNumberType;
+import az.autoparts.api.catalog.domain.VehicleGeneration;
 import az.autoparts.api.catalog.domain.VehicleMake;
 import az.autoparts.api.catalog.domain.VehicleModel;
 import az.autoparts.api.catalog.domain.VehicleVariant;
@@ -20,6 +21,7 @@ import az.autoparts.api.catalog.repo.CategoryRepository;
 import az.autoparts.api.catalog.repo.FitmentRepository;
 import az.autoparts.api.catalog.repo.PartNumberRepository;
 import az.autoparts.api.catalog.repo.PartRepository;
+import az.autoparts.api.catalog.repo.VehicleGenerationRepository;
 import az.autoparts.api.catalog.repo.VehicleMakeRepository;
 import az.autoparts.api.catalog.repo.VehicleModelRepository;
 import az.autoparts.api.catalog.repo.VehicleVariantRepository;
@@ -40,6 +42,7 @@ public class DevSeedService {
 
     private final VehicleMakeRepository makes;
     private final VehicleModelRepository models;
+    private final VehicleGenerationRepository generations;
     private final VehicleVariantRepository variants;
     private final CategoryRepository categories;
     private final PartRepository parts;
@@ -74,6 +77,7 @@ public class DevSeedService {
         parts.deleteAllInBatch();
         categories.deleteAllInBatch();
         variants.deleteAllInBatch();
+        generations.deleteAllInBatch();
         models.deleteAllInBatch();
         makes.deleteAllInBatch();
     }
@@ -92,40 +96,40 @@ public class DevSeedService {
         VehicleMake lada     = makes.save(make("Lada", "lada", 50));
 
         // ~25 models
-        VehicleModel corolla   = models.save(model(toyota, "Corolla", "corolla", 2010, 2024));
-        VehicleModel camry     = models.save(model(toyota, "Camry", "camry", 2012, 2024));
-        VehicleModel rav4      = models.save(model(toyota, "RAV4", "rav4", 2013, 2024));
+        VehicleModel corolla   = model(toyota, "Corolla", "corolla", 2010, 2024);
+        VehicleModel camry     = model(toyota, "Camry", "camry", 2012, 2024);
+        VehicleModel rav4      = model(toyota, "RAV4", "rav4", 2013, 2024);
 
-        VehicleModel sonata    = models.save(model(hyundai, "Sonata", "sonata", 2010, 2019));
-        VehicleModel elantra   = models.save(model(hyundai, "Elantra", "elantra", 2011, 2024));
-        VehicleModel tucson    = models.save(model(hyundai, "Tucson", "tucson", 2015, 2024));
+        VehicleModel sonata    = model(hyundai, "Sonata", "sonata", 2010, 2019);
+        VehicleModel elantra   = model(hyundai, "Elantra", "elantra", 2011, 2024);
+        VehicleModel tucson    = model(hyundai, "Tucson", "tucson", 2015, 2024);
 
-        VehicleModel optima    = models.save(model(kia, "Optima", "optima", 2011, 2020));
-        VehicleModel sportage  = models.save(model(kia, "Sportage", "sportage", 2010, 2024));
-        VehicleModel rio       = models.save(model(kia, "Rio", "rio", 2012, 2024));
+        VehicleModel optima    = model(kia, "Optima", "optima", 2011, 2020);
+        VehicleModel sportage  = model(kia, "Sportage", "sportage", 2010, 2024);
+        VehicleModel rio       = model(kia, "Rio", "rio", 2012, 2024);
 
-        VehicleModel bmw3      = models.save(model(bmw, "3 Series", "3-series", 2011, 2024));
-        VehicleModel bmw5      = models.save(model(bmw, "5 Series", "5-series", 2010, 2024));
-        VehicleModel bmwX5     = models.save(model(bmw, "X5", "x5", 2013, 2024));
+        VehicleModel bmw3      = model(bmw, "3 Series", "3-series", 2011, 2024);
+        VehicleModel bmw5      = model(bmw, "5 Series", "5-series", 2010, 2024);
+        VehicleModel bmwX5     = model(bmw, "X5", "x5", 2013, 2024);
 
-        VehicleModel cclass    = models.save(model(mercedes, "C-Class", "c-class", 2014, 2024));
-        VehicleModel eclass    = models.save(model(mercedes, "E-Class", "e-class", 2010, 2024));
+        VehicleModel cclass    = model(mercedes, "C-Class", "c-class", 2014, 2024);
+        VehicleModel eclass    = model(mercedes, "E-Class", "e-class", 2010, 2024);
 
-        VehicleModel passat    = models.save(model(vw, "Passat", "passat", 2010, 2024));
-        VehicleModel golf      = models.save(model(vw, "Golf", "golf", 2012, 2024));
-        VehicleModel tiguan    = models.save(model(vw, "Tiguan", "tiguan", 2014, 2024));
+        VehicleModel passat    = model(vw, "Passat", "passat", 2010, 2024);
+        VehicleModel golf      = model(vw, "Golf", "golf", 2012, 2024);
+        VehicleModel tiguan    = model(vw, "Tiguan", "tiguan", 2014, 2024);
 
-        VehicleModel altima    = models.save(model(nissan, "Altima", "altima", 2013, 2024));
-        VehicleModel xtrail    = models.save(model(nissan, "X-Trail", "x-trail", 2014, 2024));
+        VehicleModel altima    = model(nissan, "Altima", "altima", 2013, 2024);
+        VehicleModel xtrail    = model(nissan, "X-Trail", "x-trail", 2014, 2024);
 
-        VehicleModel civic     = models.save(model(honda, "Civic", "civic", 2012, 2024));
-        VehicleModel accord    = models.save(model(honda, "Accord", "accord", 2013, 2024));
+        VehicleModel civic     = model(honda, "Civic", "civic", 2012, 2024);
+        VehicleModel accord    = model(honda, "Accord", "accord", 2013, 2024);
 
-        VehicleModel focus     = models.save(model(ford, "Focus", "focus", 2011, 2018));
-        VehicleModel fusion    = models.save(model(ford, "Fusion", "fusion", 2013, 2020));
+        VehicleModel focus     = model(ford, "Focus", "focus", 2011, 2018);
+        VehicleModel fusion    = model(ford, "Fusion", "fusion", 2013, 2020);
 
-        VehicleModel vesta     = models.save(model(lada, "Vesta", "vesta", 2015, 2024));
-        VehicleModel niva      = models.save(model(lada, "Niva", "niva", 2010, 2024));
+        VehicleModel vesta     = model(lada, "Vesta", "vesta", 2015, 2024);
+        VehicleModel niva      = model(lada, "Niva", "niva", 2010, 2024);
 
         // ~5 variants on a few popular models
         variants.save(variant(corolla, 2018, "1.6 SE", "2ZR-FE", "sedan", FuelType.PETROL));
@@ -253,15 +257,26 @@ public class DevSeedService {
     }
 
     private VehicleModel model(VehicleMake make, String name, String slug, int yearFrom, int yearTo) {
-        return VehicleModel.builder()
+        VehicleModel model = models.save(VehicleModel.builder()
             .make(make).name(name).slug(slug)
             .yearFrom((short) yearFrom).yearTo((short) yearTo)
-            .build();
+            .build());
+        // Every model gets one default generation in the demo dataset. Admins
+        // can later split a model into multiple generations (e.g. BMW 3 Series
+        // → E46 / E90 / F30 / G20) once we have an admin UI for it.
+        generations.save(VehicleGeneration.builder()
+            .model(model).name(name).slug("gen")
+            .yearFrom((short) yearFrom).yearTo((short) yearTo)
+            .build());
+        return model;
     }
 
     private VehicleVariant variant(VehicleModel model, int year, String trim, String engineCode, String body, FuelType fuel) {
+        VehicleGeneration gen = generations.findAllByModelIdOrderByYearFromAsc(model.getId()).stream()
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("No generation for model " + model.getSlug()));
         return VehicleVariant.builder()
-            .model(model).year((short) year).trim(trim).engineCode(engineCode).bodyType(body).fuel(fuel)
+            .generation(gen).year((short) year).trim(trim).engineCode(engineCode).bodyType(body).fuel(fuel)
             .build();
     }
 

@@ -16,6 +16,7 @@ import az.autoparts.api.catalog.api.dto.DiagramResponse;
 import az.autoparts.api.catalog.api.dto.FitmentResponse;
 import az.autoparts.api.catalog.api.dto.PartListItem;
 import az.autoparts.api.catalog.api.dto.PartResponse;
+import az.autoparts.api.catalog.api.dto.VehicleGenerationResponse;
 import az.autoparts.api.catalog.api.dto.VehicleMakeResponse;
 import az.autoparts.api.catalog.api.dto.VehicleModelResponse;
 import az.autoparts.api.catalog.api.dto.VehicleVariantResponse;
@@ -41,17 +42,39 @@ public class CatalogController {
         return catalogService.listModels(makeSlug);
     }
 
+    @GetMapping("/models/{modelId}/generations")
+    public List<VehicleGenerationResponse> listGenerations(@PathVariable UUID modelId) {
+        return catalogService.listGenerations(modelId);
+    }
+
     @GetMapping("/models/{modelId}/years")
     public List<Short> listYears(@PathVariable UUID modelId) {
         return catalogService.listYears(modelId);
     }
 
+    @GetMapping("/generations/{generationId}/years")
+    public List<Short> listYearsByGeneration(@PathVariable UUID generationId) {
+        return catalogService.listYearsByGeneration(generationId);
+    }
+
+    /**
+     * /variants supports two query shapes: by model (legacy, aggregates across
+     * all generations of the model) or by generation (preferred). Exactly one
+     * of {@code model} or {@code generation} must be supplied.
+     */
     @GetMapping("/variants")
     public List<VehicleVariantResponse> listVariants(
-        @RequestParam("model") UUID modelId,
+        @RequestParam(name = "model", required = false) UUID modelId,
+        @RequestParam(name = "generation", required = false) UUID generationId,
         @RequestParam("year") short year
     ) {
-        return catalogService.listVariants(modelId, year);
+        if (generationId != null) {
+            return catalogService.listVariantsByGeneration(generationId, year);
+        }
+        if (modelId != null) {
+            return catalogService.listVariants(modelId, year);
+        }
+        throw new IllegalArgumentException("Either 'generation' or 'model' query parameter is required");
     }
 
     @GetMapping("/categories")
