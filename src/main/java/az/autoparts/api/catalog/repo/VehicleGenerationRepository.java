@@ -28,4 +28,21 @@ public interface VehicleGenerationRepository extends JpaRepository<VehicleGenera
         @Param("makeSlug") String makeSlug,
         @Param("modelSlug") String modelSlug
     );
+
+    boolean existsByModelIdAndSlug(UUID modelId, String slug);
+
+    boolean existsByModelIdAndSlugAndIdNot(UUID modelId, String slug, UUID id);
+
+    @Query("""
+        select g, count(v)
+          from VehicleGeneration g
+          left join VehicleVariant v on v.generation.id = g.id
+         where g.model.id = :modelId
+         group by g
+         order by g.yearFrom asc, g.name asc
+        """)
+    List<Object[]> findAllWithVariantCountByModelId(@Param("modelId") UUID modelId);
+
+    @Query("select count(v) from VehicleVariant v where v.generation.id = :generationId")
+    long countVariantsByGenerationId(@Param("generationId") UUID generationId);
 }

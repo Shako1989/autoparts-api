@@ -4,9 +4,11 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import az.autoparts.api.catalog.domain.VehicleGeneration;
 import az.autoparts.api.catalog.domain.VehicleVariant;
 
 public interface VehicleVariantRepository extends JpaRepository<VehicleVariant, UUID> {
@@ -64,5 +66,14 @@ public interface VehicleVariantRepository extends JpaRepository<VehicleVariant, 
         @Param("makeSlug") String makeSlug,
         @Param("modelSlug") String modelSlug,
         @Param("year") short year
+    );
+
+    List<VehicleVariant> findAllByGenerationIdAndIdIn(UUID generationId, List<UUID> ids);
+
+    @Modifying
+    @Query("update VehicleVariant v set v.generation = :target where v.id in :ids")
+    int bulkReassignToGeneration(
+        @Param("target") VehicleGeneration target,
+        @Param("ids") List<UUID> ids
     );
 }

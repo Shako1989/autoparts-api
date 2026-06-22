@@ -5,6 +5,10 @@ import java.util.UUID;
 
 import az.autoparts.api.catalog.api.admin.dto.AdminCalloutEntry;
 import az.autoparts.api.catalog.api.admin.dto.AdminCategoryResponse;
+import az.autoparts.api.catalog.api.admin.dto.AdminGenerationResponse;
+import az.autoparts.api.catalog.api.admin.dto.CreateGenerationRequest;
+import az.autoparts.api.catalog.api.admin.dto.MoveVariantsRequest;
+import az.autoparts.api.catalog.api.admin.dto.UpdateGenerationRequest;
 import az.autoparts.api.catalog.api.admin.dto.AdminDiagramListItem;
 import az.autoparts.api.catalog.api.admin.dto.AdminDiagramResponse;
 import az.autoparts.api.catalog.api.admin.dto.AdminFitmentEntry;
@@ -32,6 +36,17 @@ import az.autoparts.api.common.pagination.PageResponse;
  * intentionally separate so role-gated mutations don't pollute the read shape.
  */
 public interface CatalogAdminService {
+
+    // ---------- generations ----------
+    List<AdminGenerationResponse> listGenerationsForAdmin(UUID modelId);
+
+    AdminGenerationResponse createGeneration(UUID modelId, CreateGenerationRequest request);
+
+    AdminGenerationResponse updateGeneration(UUID generationId, UpdateGenerationRequest request);
+
+    void deleteGeneration(UUID generationId);
+
+    int moveVariants(UUID srcGenerationId, MoveVariantsRequest request);
 
     // ---------- categories ----------
     List<AdminCategoryResponse> listCategories();

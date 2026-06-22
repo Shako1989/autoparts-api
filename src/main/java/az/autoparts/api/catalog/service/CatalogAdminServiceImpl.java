@@ -18,6 +18,7 @@ import az.autoparts.api.catalog.api.admin.dto.AdminCategoryResponse;
 import az.autoparts.api.catalog.api.admin.dto.AdminDiagramListItem;
 import az.autoparts.api.catalog.api.admin.dto.AdminDiagramResponse;
 import az.autoparts.api.catalog.api.admin.dto.AdminFitmentEntry;
+import az.autoparts.api.catalog.api.admin.dto.AdminGenerationResponse;
 import az.autoparts.api.catalog.api.admin.dto.AdminPartListItem;
 import az.autoparts.api.catalog.api.admin.dto.AdminPartNumberEntry;
 import az.autoparts.api.catalog.api.admin.dto.AdminPartCalloutLocation;
@@ -26,12 +27,15 @@ import az.autoparts.api.catalog.api.admin.dto.AdminPresignedUploadResponse;
 import az.autoparts.api.catalog.api.admin.dto.CreateCalloutRequest;
 import az.autoparts.api.catalog.api.admin.dto.CreateCategoryRequest;
 import az.autoparts.api.catalog.api.admin.dto.CreateDiagramRequest;
+import az.autoparts.api.catalog.api.admin.dto.CreateGenerationRequest;
 import az.autoparts.api.catalog.api.admin.dto.CreatePartNumberRequest;
 import az.autoparts.api.catalog.api.admin.dto.CreatePartRequest;
+import az.autoparts.api.catalog.api.admin.dto.MoveVariantsRequest;
 import az.autoparts.api.catalog.api.admin.dto.ReorderCategoriesRequest;
 import az.autoparts.api.catalog.api.admin.dto.UpdateCalloutRequest;
 import az.autoparts.api.catalog.api.admin.dto.UpdateCategoryRequest;
 import az.autoparts.api.catalog.api.admin.dto.UpdateDiagramRequest;
+import az.autoparts.api.catalog.api.admin.dto.UpdateGenerationRequest;
 import az.autoparts.api.catalog.api.admin.dto.UpdatePartRequest;
 import az.autoparts.api.catalog.api.dto.FitmentInput;
 import az.autoparts.api.catalog.domain.Category;
@@ -40,6 +44,8 @@ import az.autoparts.api.catalog.domain.DiagramCallout;
 import az.autoparts.api.catalog.domain.Fitment;
 import az.autoparts.api.catalog.domain.Part;
 import az.autoparts.api.catalog.domain.PartNumber;
+import az.autoparts.api.catalog.domain.VehicleGeneration;
+import az.autoparts.api.catalog.domain.VehicleModel;
 import az.autoparts.api.catalog.domain.VehicleVariant;
 import az.autoparts.api.catalog.repo.CategoryRepository;
 import az.autoparts.api.catalog.repo.DiagramCalloutRepository;
@@ -47,6 +53,8 @@ import az.autoparts.api.catalog.repo.DiagramRepository;
 import az.autoparts.api.catalog.repo.FitmentRepository;
 import az.autoparts.api.catalog.repo.PartNumberRepository;
 import az.autoparts.api.catalog.repo.PartRepository;
+import az.autoparts.api.catalog.repo.VehicleGenerationRepository;
+import az.autoparts.api.catalog.repo.VehicleModelRepository;
 import az.autoparts.api.catalog.repo.VehicleVariantRepository;
 import az.autoparts.api.common.error.BadRequestException;
 import az.autoparts.api.common.error.ResourceNotFoundException;
@@ -54,6 +62,7 @@ import az.autoparts.api.common.pagination.PageResponse;
 import az.autoparts.api.common.storage.S3StorageService;
 import az.autoparts.api.listings.service.ListingService;
 import java.time.Duration;
+import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -68,10 +77,119 @@ public class CatalogAdminServiceImpl implements CatalogAdminService {
     private final FitmentRepository fitments;
     private final DiagramRepository diagrams;
     private final DiagramCalloutRepository diagramCallouts;
+    private final VehicleGenerationRepository generations;
+    private final VehicleModelRepository vehicleModels;
     private final VehicleVariantRepository variants;
     private final CatalogService catalogService;
     private final ListingService listingService;
     private final S3StorageService storage;
+
+    // ---------- generations ----------
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminGenerationResponse> listGenerationsForAdmin(UUID modelId) {
+        vehicleModels.findById(modelId)
+            .orElseThrow(() -> new ResourceNotFoundException("Model not found: " + modelId));
+        return generations.findAllWithVariantCountByModelId(modelId).stream()
+            .map(row -> toGenerationResponse((VehicleGeneration) row[0], (Long) row[1]))
+            .toList();
+    }
+
+    @Override
+    @Transactional
+    public AdminGenerationResponse createGeneration(UUID modelId, CreateGenerationRequest request) {
+        VehicleModel model = vehicleModels.findById(modelId)
+            .orElseThrow(() -> new ResourceNotFoundException("Model not found: " + modelId));
+        if (request.yearTo() != null && request.yearTo() < request.yearFrom()) {
+            throw new BadRequestException("yearTo must be >= yearFrom");
+        }
+        if (generations.existsByModelIdAndSlug(modelId, request.slug())) {
+            throw new BadRequestException("Slug '" + request.slug() + "' already used in this model");
+        }
+        VehicleGeneration saved = generations.save(VehicleGeneration.builder()
+            .model(model)
+            .code(blankToNull(request.code()))
+            .name(request.name())
+            .slug(request.slug())
+            .yearFrom(request.yearFrom())
+            .yearTo(request.yearTo())
+            .build());
+        return toGenerationResponse(saved, 0L);
+    }
+
+    @Override
+    @Transactional
+    public AdminGenerationResponse updateGeneration(UUID generationId, UpdateGenerationRequest request) {
+        VehicleGeneration gen = generations.findById(generationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Generation not found: " + generationId));
+        if (request.name() != null && !request.name().isBlank()) gen.setName(request.name());
+        if (request.code() != null) gen.setCode(blankToNull(request.code()));
+        if (request.slug() != null && !request.slug().isBlank()) {
+            if (generations.existsByModelIdAndSlugAndIdNot(gen.getModel().getId(), request.slug(), generationId)) {
+                throw new BadRequestException("Slug '" + request.slug() + "' already used in this model");
+            }
+            gen.setSlug(request.slug());
+        }
+        if (request.yearFrom() != null) gen.setYearFrom(request.yearFrom());
+        if (request.yearTo() != null) gen.setYearTo(request.yearTo() == 0 ? null : request.yearTo());
+        short effectiveYearFrom = gen.getYearFrom();
+        Short effectiveYearTo = gen.getYearTo();
+        if (effectiveYearTo != null && effectiveYearTo < effectiveYearFrom) {
+            throw new BadRequestException("yearTo must be >= yearFrom");
+        }
+        VehicleGeneration saved = generations.save(gen);
+        long count = generations.countVariantsByGenerationId(generationId);
+        return toGenerationResponse(saved, count);
+    }
+
+    @Override
+    @Transactional
+    public void deleteGeneration(UUID generationId) {
+        generations.findById(generationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Generation not found: " + generationId));
+        long count = generations.countVariantsByGenerationId(generationId);
+        if (count > 0) {
+            throw new BadRequestException(
+                "Generation has " + count + " variants; reassign them first");
+        }
+        generations.deleteById(generationId);
+    }
+
+    @Override
+    @Transactional
+    public int moveVariants(UUID srcGenerationId, MoveVariantsRequest request) {
+        VehicleGeneration src = generations.findById(srcGenerationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Source generation not found: " + srcGenerationId));
+        VehicleGeneration target = generations.findById(request.targetGenerationId())
+            .orElseThrow(() -> new ResourceNotFoundException("Target generation not found: " + request.targetGenerationId()));
+        if (!src.getModel().getId().equals(target.getModel().getId())) {
+            throw new BadRequestException("Source and target generations must belong to the same model");
+        }
+        List<UUID> requestedIds = request.variantIds();
+        List<VehicleVariant> found = variants.findAllByGenerationIdAndIdIn(srcGenerationId, requestedIds);
+        if (found.size() != requestedIds.size()) {
+            List<UUID> foundIds = found.stream().map(VehicleVariant::getId).toList();
+            List<UUID> offenders = new ArrayList<>(requestedIds);
+            offenders.removeAll(foundIds);
+            throw new BadRequestException(
+                "Variants not found in source generation: " + offenders);
+        }
+        return variants.bulkReassignToGeneration(target, requestedIds);
+    }
+
+    private AdminGenerationResponse toGenerationResponse(VehicleGeneration g, long variantCount) {
+        return new AdminGenerationResponse(
+            g.getId(),
+            g.getModel().getId(),
+            g.getCode(),
+            g.getName(),
+            g.getSlug(),
+            g.getYearFrom(),
+            g.getYearTo(),
+            variantCount
+        );
+    }
 
     // ---------- categories ----------
 
