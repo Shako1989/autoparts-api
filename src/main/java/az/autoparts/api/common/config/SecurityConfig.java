@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -24,6 +25,13 @@ public class SecurityConfig {
     SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
+            // Hand CORS handling to the CorsConfigurationSource bean. This
+            // makes Spring Security emit Access-Control-* headers on its own
+            // error responses (401 expired-JWT, 403 missing-role), so the
+            // browser can read them and the axios 401 interceptor can fire
+            // its login-redirect instead of surfacing as a "CORS blocked"
+            // error in the console.
+            .cors(Customizer.withDefaults())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // CORS preflight: let the CorsFilter answer OPTIONS on any path
