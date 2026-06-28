@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import az.autoparts.api.common.security.JwtAuthenticationFilter;
 import az.autoparts.api.common.security.JwtProperties;
+import az.autoparts.api.common.security.RestAuthEntryPoint;
 import az.autoparts.api.identity.service.AdminBootstrapProperties;
 
 @Configuration
@@ -22,7 +23,11 @@ import az.autoparts.api.identity.service.AdminBootstrapProperties;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter) throws Exception {
+    SecurityFilterChain filterChain(
+        HttpSecurity http,
+        JwtAuthenticationFilter jwtFilter,
+        RestAuthEntryPoint restAuthEntryPoint
+    ) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             // Hand CORS handling to the CorsConfigurationSource bean. This
@@ -32,6 +37,11 @@ public class SecurityConfig {
             // its login-redirect instead of surfacing as a "CORS blocked"
             // error in the console.
             .cors(Customizer.withDefaults())
+            // Return 401 (not 403) for any anonymous hit on a protected path.
+            // 403 stays for "authenticated but missing the required role".
+            // The frontend interceptor's 401 → /login redirect depends on this
+            // distinction.
+            .exceptionHandling(eh -> eh.authenticationEntryPoint(restAuthEntryPoint))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // CORS preflight: let the CorsFilter answer OPTIONS on any path
