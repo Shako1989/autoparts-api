@@ -253,6 +253,7 @@ Response interceptor:
 - `api/sellers.ts` — `useMySellerProfile`, `useBecomeSeller` (also mutates local auth user role to `SELLER`), `useUpdateMySellerProfile`.
 - `api/listings.ts` — `useListing`, `usePartListings`, `usePartListingsSummary`, `useMyListings`, `useCreateListing`, `useUpdateListing`, `usePresignPhoto`, `useConfirmPhoto`, `useRemovePhoto`, plus the bare-axios helper `uploadFileToPresignedUrl`.
 - `api/search.ts` — `useSearch(q, page, size)` keyed by query + locale.
+- `api/catalog.ts` — catalog reads plus `useVinLookup()` (a mutation; the server caches decodes). It backs `components/catalog/VinLookup.tsx`, the "find by VIN" row rendered inside `VehiclePicker`: `EXACT` navigates to `/v/...` and adds the car to the garage, `AMBIGUOUS` lists the candidate versions, `MODEL_ONLY` offers the make/model/year page, `MAKE_ONLY` preselects the make, the rest explain and leave the manual picker (statuses in §6b).
 
 ### Diagram callout panel
 
