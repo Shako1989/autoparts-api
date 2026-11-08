@@ -133,6 +133,8 @@ services:
     environment:
       API_HOST: ${API_HOST}
       MEDIA_HOST: ${MEDIA_HOST}
+      WHEREIS_API_HOST: ${WHEREIS_API_HOST}
+      WHEREIS_MEDIA_HOST: ${WHEREIS_MEDIA_HOST}
 
 volumes:
   postgres-data:
