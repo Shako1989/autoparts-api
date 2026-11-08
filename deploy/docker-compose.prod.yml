@@ -50,6 +50,20 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    container_name: autoparts-redis
+    restart: unless-stopped
+    # Cache only (vPIC VIN decodes, see CacheConfig): no persistence, bounded
+    # memory, and not exposed outside the docker network. The API tolerates
+    # Redis being down; it just stops caching.
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
   api:
     image: autoparts-api:${API_VERSION:-latest}
     build:
@@ -61,6 +75,8 @@ services:
       postgres:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
