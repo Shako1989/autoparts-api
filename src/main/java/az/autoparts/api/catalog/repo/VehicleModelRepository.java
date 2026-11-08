@@ -13,4 +13,6 @@ public interface VehicleModelRepository extends JpaRepository<VehicleModel, UUID
     List<VehicleModel> findAllByMakeIdOrderByNameAsc(UUID makeId);
 
     Optional<VehicleModel> findByMakeIdAndSlug(UUID makeId, String slug);
+
+    List<VehicleModel> findAllByMakeIdAndNameIgnoreCase(UUID makeId, String name);
 }

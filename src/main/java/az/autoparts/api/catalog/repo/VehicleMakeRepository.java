@@ -12,5 +12,7 @@ public interface VehicleMakeRepository extends JpaRepository<VehicleMake, UUID> 
 
     Optional<VehicleMake> findBySlug(String slug);
 
+    Optional<VehicleMake> findByNameIgnoreCase(String name);
+
     List<VehicleMake> findAllByOrderByPopularityDescNameAsc();
 }

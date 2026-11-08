@@ -63,6 +63,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(pd);
     }
 
+    @ExceptionHandler(UpstreamUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleUpstreamUnavailable(UpstreamUnavailableException ex, HttpServletRequest req) {
+        log.warn("503 upstream unavailable on {} {}: {} ({})", req.getMethod(), req.getRequestURI(), ex.getMessage(),
+            ex.getCause() == null ? "no cause" : ex.getCause().toString());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+        pd.setType(URI.create("https://autoparts.az/problems/upstream-unavailable"));
+        pd.setTitle("Upstream service unavailable");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(pd);
+    }
+
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ProblemDetail> handleRouteNotFound(NoResourceFoundException ex) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "No handler for " + ex.getResourcePath());

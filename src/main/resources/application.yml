@@ -10,6 +10,12 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+  data:
+    redis:
+      # Redis only backs caches (vPIC VIN decodes). Fail fast so a down Redis
+      # degrades to uncached calls instead of stalling requests.
+      connect-timeout: 2s
+      timeout: 2s
 
 server:
   port: 8080
@@ -20,6 +26,13 @@ server:
 app:
   cors:
     allowed-origins: http://localhost:5173
+  vpic:
+    # NHTSA vPIC VIN decoder (free, public domain, rate-controlled).
+    # Backs GET /api/v1/catalog/vin/{vin}; decodes are cached in Redis.
+    base-url: https://vpic.nhtsa.dot.gov/api
+    connect-timeout: 3s
+    read-timeout: 10s
+    cache-ttl: 30d
 
 springdoc:
   api-docs:

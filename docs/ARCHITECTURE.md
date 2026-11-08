@@ -169,6 +169,7 @@ The standalone diagram pages live at `/d/{slug}` and the category page (`/c/carr
 | GET  | `/api/v1/catalog/parts/{id}` | none | — | |
 | GET  | `/api/v1/catalog/parts/{id}/fitments` | none | — | |
 | GET  | `/api/v1/catalog/diagrams/{slug}` | none | — | Full diagram + callouts |
+| GET  | `/api/v1/catalog/vin/{vin}?year=` | none | — | NHTSA vPIC decode + catalog match (§6b) |
 | POST | `/api/v1/my/seller` | JWT | any | Promote to SELLER + create profile |
 | GET  | `/api/v1/my/seller` | JWT | SELLER | |
 | PATCH | `/api/v1/my/seller` | JWT | SELLER | |
@@ -197,6 +198,21 @@ The standalone diagram pages live at `/d/{slug}` and the category page (`/c/carr
 4. Enrich each part via `CatalogService.getPartsSummary` and `ListingService.countActiveForParts`.
 
 If you want unified ranking with a single score across the two strategies later, that's a v2 SQL refactor; the candidate cap should change with it.
+
+## 6b. VIN lookup (NHTSA vPIC)
+
+`GET /api/v1/catalog/vin/{vin}?year=` decodes a VIN through NHTSA's free, public-domain vPIC API and maps the answer onto the catalog. Public, like the rest of `/api/v1/catalog/**`.
+
+Flow (`catalog/service/VinLookupServiceImpl`):
+
+1. Normalise + validate the VIN: 17 characters, no I/O/Q; `*` is accepted only for the check digit and the serial number (positions 9 and 12–17), which carry no specification. `year` is an optional hint for vPIC's 30-year model-year cycle.
+2. `catalog/service/vpic/VpicRestClient` calls `DecodeVinValues/{vin}?format=json` and keeps ~20 of the 145 fields (`VpicDecodeResult`). Results are cached in Redis (cache `vpic-decode`, TTL `app.vpic.cache-ttl`, default 30 days, stored as JSON). Cache errors are logged and ignored (`common/config/CacheConfig`), so a down Redis only costs latency.
+3. Match: make by name or slug → model by vPIC model/series name or slug, falling back to a variant whose **trim** equals vPIC's model name (BMW decodes as `328i`; our model is `3 Series`) → variants for model + model year. Hard rules drop any variant that contradicts vPIC even if nothing is left: catalog fuel inferred from vPIC fuel + electrification (mild hybrids follow their combustion fuel), a different "2.0"-style displacement figure in trim/engine code, a different BMW-style designation (vPIC model `335i` vs trim `328i`). Soft rules then prefer, never exclude: body type inferred from vPIC body class, trim tokens, a stated displacement → generation = the one shared by the remaining variants, else the only generation whose year range contains the model year.
+4. `status`: `EXACT` (one variant), `AMBIGUOUS` (several, let the user pick), `MODEL_ONLY`, `MAKE_ONLY`, `NOT_IN_CATALOG`, `NOT_DECODED` (vPIC returned no make, typical for non-US-market cars). Decoder outage → 503 with problem type `upstream-unavailable`.
+
+Config: `app.vpic.{base-url, connect-timeout, read-timeout, cache-ttl}`; defaults live in `application.yml`.
+
+Limitations: vPIC only knows vehicles sold in the US/Canada. European-, Russian- and Asian-market VINs decode to make only (or nothing), so the UI must fall back to the manual make → model → year picker. vPIC never returns manufacturer engine codes; fuel, body, trim and displacement are all there is for narrowing, so `AMBIGUOUS` is a normal outcome.
 
 ---
 
@@ -314,6 +330,7 @@ Or from the UI: `/login` → enter phone → "Fetch dev code" → verify. Then `
 - **Orders / payments / shipping** — entirely out of scope for v1.
 - **MinIO bucket policies** — set to anonymous-read for dev. Production needs CDN + tighter policies + bucket CORS for browser uploads.
 - **Search ranking** — exact-then-trigram dedup, not a unified score. Acceptable for ~10–50k parts. Switch to Meilisearch if relevance becomes a problem.
+- **VIN lookup is US-market only** — vPIC has no data for cars never sold in North America (see §6b). A paid European decoder or TecDoc would be needed for the rest of the fleet.
 - **Currency is locked to AZN** — column allows others, UI does not.
 - **Image cache busting** — manual `?v=…` bump on re-upload. Long-term: versioned keys or `Cache-Control: no-cache` on the bucket.
 

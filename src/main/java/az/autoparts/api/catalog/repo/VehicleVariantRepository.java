@@ -68,6 +68,24 @@ public interface VehicleVariantRepository extends JpaRepository<VehicleVariant, 
         @Param("year") short year
     );
 
+    /**
+     * Variants of a make whose trim equals the given text, any model or year.
+     * Used by VIN lookup, where vPIC reports BMW models as "328i" while the
+     * catalog files that under model "3 Series" with trim "328i".
+     */
+    @Query("""
+        select v from VehicleVariant v
+          join fetch v.generation g
+          join fetch g.model m
+         where m.make.id = :makeId
+           and lower(v.trim) = lower(:trim)
+         order by v.year desc
+        """)
+    List<VehicleVariant> findAllByMakeIdAndTrimIgnoreCase(
+        @Param("makeId") UUID makeId,
+        @Param("trim") String trim
+    );
+
     List<VehicleVariant> findAllByGenerationIdAndIdIn(UUID generationId, List<UUID> ids);
 
     @Modifying

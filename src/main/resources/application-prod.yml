@@ -48,7 +48,8 @@ app:
 
 management:
   health:
-    # Redis is on the classpath but unused in v1 — exclude from /actuator/health.
+    # Redis only backs the vPIC VIN-decode cache and cache errors are non-fatal
+    # (see CacheConfig), so keep it out of /actuator/health.
     redis:
       enabled: false
     # JavaMailSender's health check opens an SMTP connection on every probe,
