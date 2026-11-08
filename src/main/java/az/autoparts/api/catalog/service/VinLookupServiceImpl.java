@@ -1,7 +1,8 @@
 package az.autoparts.api.catalog.service;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -166,9 +167,13 @@ class VinLookupServiceImpl implements VinLookupService {
         if (bodyType != null) {
             current = keepIfAny(current, v -> v.getBodyType() == null || v.getBodyType().equalsIgnoreCase(bodyType));
         }
+        String wantedTrim = VinLookupSupport.normalizeTrim(d.trim());
+        if (wantedTrim != null) {
+            current = keepIfAny(current, v -> wantedTrim.equals(VinLookupSupport.normalizeTrim(v.getTrim())));
+        }
         Set<String> wanted = VinLookupSupport.tokens(d.trim(), d.series(), d.model());
         if (!wanted.isEmpty()) {
-            current = keepIfAny(current, v -> !Collections.disjoint(VinLookupSupport.tokens(v.getTrim()), wanted));
+            current = keepBestTokenOverlap(current, wanted);
         }
         if (litres != null) {
             current = keepIfAny(current, v -> !VinLookupSupport.litresIn(v.getTrim(), v.getEngineCode()).isEmpty());
@@ -187,6 +192,21 @@ class VinLookupServiceImpl implements VinLookupService {
     private static List<VehicleVariant> keepIfAny(List<VehicleVariant> in, Predicate<VehicleVariant> keep) {
         List<VehicleVariant> out = in.stream().filter(keep).toList();
         return out.isEmpty() ? in : out;
+    }
+
+    /**
+     * Keeps the variants whose trim shares the most tokens with what vPIC
+     * reported ("SE Hybrid" beats "SEL Hybrid" for a decoded "SE Hybrid"),
+     * or everything when no trim shares a token at all.
+     */
+    private static List<VehicleVariant> keepBestTokenOverlap(List<VehicleVariant> in, Set<String> wanted) {
+        Map<VehicleVariant, Long> overlap = new HashMap<>();
+        for (VehicleVariant v : in) {
+            overlap.put(v, VinLookupSupport.tokens(v.getTrim()).stream().filter(wanted::contains).count());
+        }
+        long best = overlap.values().stream().mapToLong(Long::longValue).max().orElse(0);
+        if (best == 0) return in;
+        return in.stream().filter(v -> overlap.get(v) == best).toList();
     }
 
     private VehicleGeneration resolveGeneration(VehicleModel model, List<VehicleVariant> candidates, Integer year) {

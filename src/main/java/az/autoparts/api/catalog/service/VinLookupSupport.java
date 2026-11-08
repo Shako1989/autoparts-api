@@ -104,6 +104,13 @@ final class VinLookupSupport {
         return null;
     }
 
+    /** "SE  Hybrid" / "se-hybrid" → "se hybrid"; null for blank input. */
+    static String normalizeTrim(String trim) {
+        if (trim == null) return null;
+        String normalised = trim.toLowerCase(Locale.ROOT).replaceAll("[\\s_-]+", " ").trim();
+        return normalised.isEmpty() ? null : normalised;
+    }
+
     static String slugify(String value) {
         return Normalizer.normalize(value, Normalizer.Form.NFKD)
             .replaceAll("[^\\p{ASCII}]", "")

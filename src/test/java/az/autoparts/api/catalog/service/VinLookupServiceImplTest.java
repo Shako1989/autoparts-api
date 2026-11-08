@@ -223,6 +223,43 @@ class VinLookupServiceImplTest {
     }
 
     @Test
+    void exact_trim_match_beats_token_overlap_among_hybrids() {
+        VehicleVariant seHybrid = variant(fusionGen, 2019, "SE Hybrid", "2.0 Atkinson HEV", "sedan", FuelType.HYBRID);
+        VehicleVariant selHybrid = variant(fusionGen, 2019, "SEL Hybrid", "2.0 Atkinson HEV", "sedan", FuelType.HYBRID);
+        VehicleVariant titaniumHybrid = variant(fusionGen, 2019, "Titanium Hybrid", "2.0 Atkinson HEV", "sedan", FuelType.HYBRID);
+        VehicleVariant titaniumEnergi = variant(fusionGen, 2019, "Titanium Energi", "2.0 Atkinson PHEV", "sedan", FuelType.HYBRID);
+        when(makes.findByNameIgnoreCase("FORD")).thenReturn(Optional.of(ford));
+        when(models.findAllByMakeIdAndNameIgnoreCase(ford.getId(), "Fusion")).thenReturn(List.of(fusion));
+        when(variants.findAllByModelIdAndYearOrderByTrimAsc(fusion.getId(), (short) 2019))
+            .thenReturn(List.of(seHybrid, selHybrid, titaniumEnergi, titaniumHybrid, fusionSe, fusionTitanium));
+        when(vpic.decode(FUSION_VIN, null)).thenReturn(
+            fusion(2019, "SE Hybrid", new BigDecimal("2.0"), "Gasoline", "Electric", "Strong HEV (Hybrid Electric Vehicle)"));
+
+        VinLookupResponse r = service.lookup(FUSION_VIN, null);
+
+        assertThat(r.status()).as("every hybrid shares the token 'hybrid'; the exact trim must win").isEqualTo(MatchStatus.EXACT);
+        assertThat(r.match().variants()).extracting(VehicleVariantResponse::id).containsExactly(seHybrid.getId());
+    }
+
+    @Test
+    void best_token_overlap_wins_when_no_trim_matches_exactly() {
+        VehicleVariant seHybrid = variant(fusionGen, 2019, "SE Hybrid", "2.0 Atkinson HEV", "sedan", FuelType.HYBRID);
+        VehicleVariant selHybrid = variant(fusionGen, 2019, "SEL Hybrid", "2.0 Atkinson HEV", "sedan", FuelType.HYBRID);
+        VehicleVariant titaniumHybrid = variant(fusionGen, 2019, "Titanium Hybrid", "2.0 Atkinson HEV", "sedan", FuelType.HYBRID);
+        when(makes.findByNameIgnoreCase("FORD")).thenReturn(Optional.of(ford));
+        when(models.findAllByMakeIdAndNameIgnoreCase(ford.getId(), "Fusion")).thenReturn(List.of(fusion));
+        when(variants.findAllByModelIdAndYearOrderByTrimAsc(fusion.getId(), (short) 2019))
+            .thenReturn(List.of(seHybrid, selHybrid, titaniumHybrid));
+        when(vpic.decode(FUSION_VIN, null)).thenReturn(
+            fusion(2019, "SE Luxury Hybrid", new BigDecimal("2.0"), "Gasoline", "Electric", "Strong HEV (Hybrid Electric Vehicle)"));
+
+        VinLookupResponse r = service.lookup(FUSION_VIN, null);
+
+        assertThat(r.status()).isEqualTo(MatchStatus.EXACT);
+        assertThat(r.match().variants()).extracting(VehicleVariantResponse::id).containsExactly(seHybrid.getId());
+    }
+
+    @Test
     void model_only_when_the_catalog_has_no_variants_for_that_year() {
         catalogKnowsFord2019();
         when(vpic.decode(FUSION_VIN, null)).thenReturn(fusion(2015, "SE", null, "Gasoline", null, null));

@@ -91,6 +91,14 @@ class VinLookupSupportTest {
         assertThat(VinLookupSupport.designation(null)).isNull();
     }
 
+    @Test
+    void normalises_trims_for_exact_comparison() {
+        assertThat(VinLookupSupport.normalizeTrim("SE  Hybrid")).isEqualTo("se hybrid");
+        assertThat(VinLookupSupport.normalizeTrim("se-hybrid")).isEqualTo("se hybrid");
+        assertThat(VinLookupSupport.normalizeTrim("  ")).isNull();
+        assertThat(VinLookupSupport.normalizeTrim(null)).isNull();
+    }
+
     private static VpicDecodeResult fuel(String primary, String secondary, String electrification) {
         return new VpicDecodeResult(null, "FORD", null, null, "Fusion", null, 2019, null, null, null, null, null,
             null, null, null, null, primary, secondary, electrification, null, "0", null);
