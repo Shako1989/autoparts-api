@@ -1,17 +1,21 @@
 # syntax=docker/dockerfile:1.7
 
 # ---------- build stage ----------
-FROM eclipse-temurin:21-jdk-jammy AS build
+# The official Gradle image ships Gradle 8.14.4, the same version the wrapper
+# pins, so the image build never downloads a Gradle distribution. That
+# download (services.gradle.org -> GitHub Releases) has timed out and 504'd
+# both in CI and on the production VM.
+FROM gradle:8.14.4-jdk21 AS build
 WORKDIR /workspace
 
-# Cache the Gradle wrapper + dependencies before the source so dependency
-# changes invalidate the cache, but source-only changes keep the cached layer.
-COPY gradlew settings.gradle.kts build.gradle.kts ./
-COPY gradle ./gradle
-RUN ./gradlew --no-daemon --version
+# Resolve dependencies before copying the source so a source-only change
+# reuses the cached dependency layer.
+COPY settings.gradle.kts build.gradle.kts ./
+RUN gradle --no-daemon dependencies --configuration compileClasspath > /dev/null \
+ && gradle --no-daemon dependencies --configuration runtimeClasspath > /dev/null
 
 COPY src ./src
-RUN ./gradlew --no-daemon clean bootJar -x test
+RUN gradle --no-daemon clean bootJar -x test
 
 # ---------- runtime stage ----------
 FROM eclipse-temurin:21-jre-jammy
