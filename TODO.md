@@ -48,7 +48,19 @@ task so they don't get re-asked.
   categories that already hold parts.
   *Decision: the 11 roots confirmed as proposed (2026-11-09).*
 
-- [ ] **4. Service parts, batch 1 — Fusion II (CD391), per engine.** The
+- [x] **4. Service parts, batch 1 — Fusion II (CD391), per engine.** Done in
+  `scripts/seed-ford-fusion-service-parts.sh` (branch `feat/fusion-service-parts`):
+  80 parts, 325 numbers (164 Ford service, 128 Motorcraft, 33 aftermarket) and
+  2,250 fitments per variant; every CD391 variant gets 19–32 parts (Energi the
+  fewest). Sources per claim and the LEFT OUT list are in the script header.
+  Below the 90% bar and therefore not seeded: front lower control arms (two
+  parallel Ford families, no deciding factor), 2017–2020 rear shocks for I4 and
+  hybrids (split by assembly plant), everything AWD-specific at the rear (link,
+  hub, non-Sport pad), Energi and Sport rear rotors, the 2.7 V6 plug for
+  MY2018–2019, and aftermarket numbers for plugs, coils, belts, cooling and hubs
+  (catalog sites block fetches). Wheel size (16–18 vs 19 in) and keyless /
+  start-stop splits live in `fitments.notes`, since the variant key has no
+  such attribute. Run the extracted SQL on prod after merge. Original note: The
   ~40 most-demanded wear and service parts for each engine (2.5 Duratec,
   1.5 / 1.6 / 2.0 EcoBoost, 2.7 EcoBoost V6, 2.0 Atkinson HEV/PHEV): oil / air /
   cabin / fuel filters, spark plugs, ignition coils, serpentine belt, thermostat,
