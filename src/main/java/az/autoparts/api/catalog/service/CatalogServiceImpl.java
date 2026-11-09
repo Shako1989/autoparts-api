@@ -51,6 +51,7 @@ import az.autoparts.api.catalog.repo.VehicleGenerationRepository;
 import az.autoparts.api.catalog.repo.VehicleMakeRepository;
 import az.autoparts.api.catalog.repo.VehicleModelRepository;
 import az.autoparts.api.catalog.repo.VehicleVariantRepository;
+import az.autoparts.api.common.error.BadRequestException;
 import az.autoparts.api.common.error.ResourceNotFoundException;
 import az.autoparts.api.common.locale.Locale;
 import lombok.RequiredArgsConstructor;
@@ -273,7 +274,13 @@ class CatalogServiceImpl implements CatalogService {
         int added = 0;
         for (FitmentInput in : inputs) {
             List<VehicleVariant> matchingVariants = variants
-                .findAllByMakeSlugAndModelSlugAndYear(in.makeSlug(), in.modelSlug(), in.year());
+                .findAllByMakeSlugAndModelSlugAndYear(in.makeSlug(), in.modelSlug(), in.year())
+                .stream()
+                .filter(in::matches)
+                .toList();
+            if (matchingVariants.isEmpty()) {
+                throw new BadRequestException("No vehicle variant matches fitment " + in.describe());
+            }
             for (VehicleVariant v : matchingVariants) {
                 if (!fitments.existsByPartIdAndVehicleVariantId(part.getId(), v.getId())) {
                     fitments.save(Fitment.builder()
