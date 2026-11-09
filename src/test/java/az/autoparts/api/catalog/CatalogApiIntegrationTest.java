@@ -1,6 +1,8 @@
 package az.autoparts.api.catalog;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
@@ -10,6 +12,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +44,9 @@ import az.autoparts.api.catalog.repo.VehicleModelRepository;
 import az.autoparts.api.catalog.repo.VehicleGenerationRepository;
 import az.autoparts.api.catalog.repo.VehicleVariantRepository;
 import az.autoparts.api.catalog.domain.VehicleGeneration;
+import az.autoparts.api.catalog.api.dto.FitmentInput;
+import az.autoparts.api.catalog.service.CatalogService;
+import az.autoparts.api.common.error.BadRequestException;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -75,6 +81,7 @@ class CatalogApiIntegrationTest {
     @Autowired PartRepository parts;
     @Autowired PartNumberRepository partNumbers;
     @Autowired FitmentRepository fitments;
+    @Autowired CatalogService catalogService;
 
     UUID modelSonataId;
     UUID variantSonataId;
@@ -292,6 +299,45 @@ class CatalogApiIntegrationTest {
         given().queryParam("variant", "not-a-uuid")
             .when().get("/api/v1/catalog/categories/brake-pads/parts")
             .then().statusCode(400);
+    }
+
+    @Test
+    void fitment_rule_without_narrowing_covers_every_variant_of_the_model_year() {
+        UUID filterId = parts.save(Part.builder()
+            .category(categories.findBySlug("brake-pads").orElseThrow())
+            .nameAz("Filtr").nameRu("Фильтр").nameEn("Filter").build()).getId();
+
+        int added = catalogService.addFitments(filterId, List.of(new FitmentInput("hyundai", "sonata", (short) 2014)));
+
+        assertThat(added).isEqualTo(2);
+        assertThat(fitments.findAllByPartId(filterId)).hasSize(2);
+    }
+
+    @Test
+    void fitment_rule_narrowed_by_engine_only_touches_that_variant() {
+        UUID filterId = parts.save(Part.builder()
+            .category(categories.findBySlug("brake-pads").orElseThrow())
+            .nameAz("Filtr").nameRu("Фильтр").nameEn("Filter").build()).getId();
+
+        int added = catalogService.addFitments(filterId, List.of(
+            new FitmentInput("hyundai", "sonata", (short) 2014, null, null, "g4kj")));
+
+        assertThat(added).isEqualTo(1);
+        assertThat(fitments.findAllByPartId(filterId))
+            .singleElement()
+            .satisfies(f -> assertThat(f.getVehicleVariant().getId()).isEqualTo(variantSonataUltimateId));
+
+        // Re-running the same rule is a no-op, and the trim spelling is case-insensitive.
+        assertThat(catalogService.addFitments(filterId, List.of(
+            new FitmentInput("hyundai", "sonata", (short) 2014, "gen", "ULTIMATE", "G4KJ")))).isZero();
+    }
+
+    @Test
+    void fitment_rule_that_matches_no_variant_is_rejected() {
+        assertThatThrownBy(() -> catalogService.addFitments(partBoschId, List.of(
+            new FitmentInput("hyundai", "sonata", (short) 2014, null, "Limited", null))))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessageContaining("trim=Limited");
     }
 
     @Test

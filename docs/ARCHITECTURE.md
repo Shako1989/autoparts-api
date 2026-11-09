@@ -168,6 +168,7 @@ The standalone diagram pages live at `/d/{slug}` and the category page (`/c/carr
 | GET  | `/api/v1/catalog/categories/{slug}/diagrams` | none | — | List for inline embed; same vehicle filters as `/parts` |
 | GET  | `/api/v1/catalog/parts/{id}` | none | — | |
 | GET  | `/api/v1/catalog/parts/{id}/fitments` | none | — | |
+| POST | `/api/v1/admin/parts/{id}/fitments` | JWT | STAFF | Rules `{makeSlug, modelSlug, year, generationSlug?, trim?, engineCode?}`; a rule attaches every matching variant of the model year, narrowing fields match case-insensitively, a rule matching nothing is 400. Seller listing creation reuses the same rules |
 | GET  | `/api/v1/catalog/diagrams/{slug}` | none | — | Full diagram + callouts |
 | GET  | `/api/v1/catalog/vin/{vin}?year=` | none | — | NHTSA vPIC decode + catalog match (§6b) |
 | POST | `/api/v1/my/seller` | JWT | any | Promote to SELLER + create profile |
