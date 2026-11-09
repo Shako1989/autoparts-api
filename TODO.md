@@ -21,7 +21,10 @@ task so they don't get re-asked.
   has, and make the seed scripts attach fitments per variant. Prerequisite for
   tasks 4–6.
 
-- [ ] **2. Fusion I (CD338, MY2006–2012) generation + variants, US market.**
+- [x] **2. Fusion I (CD338, MY2006–2012) generation + variants, US market.**
+  Done in `scripts/seed-ford-fusion-i-variants.sh` (branch `feat/fusion-i-variants`):
+  41 variants, sources in the header; MY2020 SE 1.5 EcoBoost added, SEL 2.0 AWD
+  confirmed not sold. Run the extracted SQL on prod after merge. Original note:
   Second generation under the `fusion` model, so the picker starts showing the
   Generation step for Fusion. Trims and engines per year with sources (Ford
   press kits / owner's manuals / vPIC), delivered as a SQL seed like
