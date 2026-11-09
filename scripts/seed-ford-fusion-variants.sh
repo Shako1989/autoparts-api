@@ -56,9 +56,11 @@
 # against EPA engine-by-year data. Ford internal engine codes are NOT appended
 # because none could be cited.
 #
+# Settled later (2026-11-09, see scripts/seed-ford-fusion-i-variants.sh for sources):
+#   -- 2020 SE  1.5 EcoBoost       SOLD: real VINs decode as SE / 1.5 / FWD; row added below
+#   -- 2020 SEL 2.0 EcoBoost (AWD) NOT SOLD: MY2020 VIN schema has no SEL AWD code
+#
 # Deliberately LEFT OUT (could not verify, < 90% confidence):
-#   -- 2020 SE  1.5 EcoBoost       (cars.com 2020 lists SE only with 2.5 / 2.0 AWD)
-#   -- 2020 SEL 2.0 EcoBoost (AWD) (KBB mentions SEL AWD, no listing confirms it)
 #   -- 2013-2014 SE AWD            (Canada-only per auto123/autos.ca; engine row
 #                                   SE 2.0 EcoBoost exists anyway as FWD)
 #   -- 2019 Hybrid S, 2019 Energi SEL (conflicting sources)
@@ -196,6 +198,7 @@ SELECT g.id, v.year, v.trim, v.engine_code, 'sedan', v.fuel,
     -- 2020: final year; Sport / 2.7 V6 dropped
     (2020::smallint, 'S',                 '2.5 Duratec iVCT',  'PETROL'),
     (2020::smallint, 'SE',                '2.5 Duratec iVCT',  'PETROL'),
+    (2020::smallint, 'SE',                '1.5 EcoBoost',      'PETROL'),
     (2020::smallint, 'SE',                '2.0 EcoBoost',      'PETROL'),
     (2020::smallint, 'SEL',               '1.5 EcoBoost',      'PETROL'),
     (2020::smallint, 'Titanium',          '2.0 EcoBoost',      'PETROL'),
@@ -203,9 +206,7 @@ SELECT g.id, v.year, v.trim, v.engine_code, 'sedan', v.fuel,
     (2020::smallint, 'SEL Hybrid',        '2.0 Atkinson HEV',  'HYBRID'),
     (2020::smallint, 'Titanium Hybrid',   '2.0 Atkinson HEV',  'HYBRID'),
     (2020::smallint, 'Titanium Energi',   '2.0 Atkinson PHEV', 'HYBRID')
-    -- TODO verify (not inserted):
-    -- (2020::smallint, 'SE',  '1.5 EcoBoost', 'PETROL'),
-    -- (2020::smallint, 'SEL', '2.0 EcoBoost', 'PETROL'),
+    -- 2020 SEL 2.0 EcoBoost: not sold in MY2020 (see header), deliberately absent.
  ) AS v(year, trim, engine_code, fuel)
  WHERE mk.slug = 'ford' AND m.slug = 'fusion' AND g.slug = 'gen'
 ON CONFLICT (generation_id, year, trim, engine_code) DO NOTHING;
