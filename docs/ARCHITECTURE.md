@@ -146,6 +146,7 @@ The standalone diagram pages live at `/d/{slug}` and the category page (`/c/carr
 
 - `autoparts-api/scripts/seed-bmw-engine-diagram.sh` — uploads a BMW engine image to MinIO and inserts the matching part + part_number + diagram + callout rows. Idempotent re-runs fail (slug unique); delete the diagram first if you want to re-run.
 - `autoparts-api/src/main/java/az/autoparts/api/catalog/dev/DevSeedService.java` — wipes and reseeds the demo catalog (makes/models/variants, categories, parts, fitments, part_numbers). Triggered via `POST /api/v1/dev/catalog/seed` (local profile only).
+- `autoparts-api/scripts/seed-category-tree.sh` — the canonical category tree (11 roots, 75 leaves, az / ru / en): upsert by slug so existing categories keep their ids and parts, legacy prod roots re-parented (`radiator` → Cooling, `front-axle` → Suspension & steering), nothing deleted, a second run changes nothing. For prod, print the heredoc body with `awk '/^docker exec/{f=1;next} /^SQL$/{f=0} f' <script>` and run it from a DB client; a seed-only change needs no VM rebuild. The slug → lucide icon mapping lives in `autoparts-web/src/components/catalog/CategoryIcon.tsx`.
 
 ---
 
