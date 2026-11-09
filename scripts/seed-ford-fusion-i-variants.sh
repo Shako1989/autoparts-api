@@ -71,7 +71,8 @@
 #
 # Run:  ./scripts/seed-ford-fusion-i-variants.sh
 #       CONTAINER=autoparts-postgres ./scripts/seed-ford-fusion-i-variants.sh
-# Prod: extract the SQL between the <<'SQL' and SQL markers and run it from a DB client.
+# Prod: print the heredoc body and run it from a DB client (seed-only change, no VM rebuild):
+#   awk '/^docker exec/{f=1;next} /^SQL$/{f=0} f' scripts/seed-ford-fusion-i-variants.sh > ~/Downloads/seed-ford-fusion-i-variants.sql
 
 set -euo pipefail
 

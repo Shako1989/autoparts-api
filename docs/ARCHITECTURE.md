@@ -144,7 +144,7 @@ The standalone diagram pages live at `/d/{slug}` and the category page (`/c/carr
 
 ### Seed scripts
 
-- `autoparts-api/scripts/seed-ford-fusion-variants.sh` — Ford Fusion II (CD391, MY2013–2020) generation + US-market variants, sources in the header. `scripts/seed-ford-fusion-i-variants.sh` — Fusion I (CD338, MY2006–2012) generation + variants plus the MY2020 SE 1.5 EcoBoost correction. Both are idempotent (`ON CONFLICT DO NOTHING`); for prod, extract the SQL between the `<<'SQL'` markers and run it from a DB client.
+- `autoparts-api/scripts/seed-ford-fusion-variants.sh` — Ford Fusion II (CD391, MY2013–2020) generation + US-market variants, sources in the header. `scripts/seed-ford-fusion-i-variants.sh` — Fusion I (CD338, MY2006–2012) generation + variants plus the MY2020 SE 1.5 EcoBoost correction. Both are idempotent (`ON CONFLICT DO NOTHING`); for prod, print the heredoc body with `awk '/^docker exec/{f=1;next} /^SQL$/{f=0} f' <script>` and run it from a DB client; a seed-only change needs no VM rebuild.
 - `autoparts-api/scripts/seed-bmw-engine-diagram.sh` — uploads a BMW engine image to MinIO and inserts the matching part + part_number + diagram + callout rows. Idempotent re-runs fail (slug unique); delete the diagram first if you want to re-run.
 - `autoparts-api/src/main/java/az/autoparts/api/catalog/dev/DevSeedService.java` — wipes and reseeds the demo catalog (makes/models/variants, categories, parts, fitments, part_numbers). Triggered via `POST /api/v1/dev/catalog/seed` (local profile only).
 
