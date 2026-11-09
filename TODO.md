@@ -30,13 +30,20 @@ task so they don't get re-asked.
   the bottom of that script (SE 1.5 EcoBoost, SEL 2.0 EcoBoost).
   *Decision: yes, gen 1 is in scope (2026-11-09).*
 
-- [ ] **3. Category tree for Fusion, az / ru / en.** Prod has four placeholder
+- [x] **3. Category tree for Fusion, az / ru / en.** Done in
+  `scripts/seed-category-tree.sh` (api branch `feat/category-tree`): 11 roots,
+  75 leaves, upsert by slug, nothing deleted; prod's `engine` and
+  `exhaust-system` stay roots, `radiator` moves under Cooling, `front-axle`
+  under Suspension & steering. Lucide icons for the new slugs in web branch
+  `feat/category-icons`. Run the extracted SQL on prod (seed-only, no VM
+  rebuild). Original note: Prod has four placeholder
   roots (engine, exhaust-system, radiator, front-axle) and two parts. Proposed
   roots, to confirm before seeding: Maintenance (filters, oil, spark plugs,
   belts, wipers), Brakes, Suspension & steering, Engine, Cooling, Electrical &
   lighting, Body (bumpers, fenders, hood, grille, mirrors), Interior,
   Transmission, Exhaust, HVAC. Merge into the existing tree; do not wipe the
   categories that already hold parts.
+  *Decision: the 11 roots confirmed as proposed (2026-11-09).*
 
 - [ ] **4. Service parts, batch 1 — Fusion II (CD391), per engine.** The
   ~40 most-demanded wear and service parts for each engine (2.5 Duratec,
@@ -65,6 +72,9 @@ task so they don't get re-asked.
 
 ## Housekeeping (whenever convenient)
 
+- [ ] `DevSeedService` still seeds its own five-root tree; after
+  `POST /api/v1/dev/catalog/seed` run `scripts/seed-category-tree.sh` to get
+  the canonical tree locally, or make the dev seed run the same SQL.
 - [ ] README still says Spring Boot 3.3 + Meilisearch; it is 3.5 + Postgres
   full-text search + Redis.
 - [ ] Six pre-existing `react-hooks/set-state-in-effect` warnings in
