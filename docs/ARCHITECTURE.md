@@ -161,11 +161,11 @@ The standalone diagram pages live at `/d/{slug}` and the category page (`/c/carr
 | GET  | `/api/v1/catalog/makes` | none | — | |
 | GET  | `/api/v1/catalog/makes/{slug}/models` | none | — | |
 | GET  | `/api/v1/catalog/models/{id}/years` | none | — | |
-| GET  | `/api/v1/catalog/variants?model=…&year=…` | none | — | |
+| GET  | `/api/v1/catalog/variants?generation=…&year=…` | none | — | `model=…` also accepted (all generations) |
 | GET  | `/api/v1/catalog/categories` | none | — | Tree |
 | GET  | `/api/v1/catalog/categories/{slug}` | none | — | Detail |
-| GET  | `/api/v1/catalog/categories/{slug}/parts` | none | — | Paginated |
-| GET  | `/api/v1/catalog/categories/{slug}/diagrams` | none | — | List for inline embed |
+| GET  | `/api/v1/catalog/categories/{slug}/parts` | none | — | Paginated; `variant=` (exact trim + engine) or `make`+`model`+`year` narrows by fitment |
+| GET  | `/api/v1/catalog/categories/{slug}/diagrams` | none | — | List for inline embed; same vehicle filters as `/parts` |
 | GET  | `/api/v1/catalog/parts/{id}` | none | — | |
 | GET  | `/api/v1/catalog/parts/{id}/fitments` | none | — | |
 | GET  | `/api/v1/catalog/diagrams/{slug}` | none | — | Full diagram + callouts |
@@ -220,7 +220,7 @@ Limitations: vPIC only knows vehicles sold in the US/Canada. European-, Russian-
 
 ### Routes (`autoparts-web/src/App.tsx`)
 
-- `/` HomePage, `/c/:slug` CategoryPage, `/v/:make/:model/:year` VehiclePage, `/d/:slug` DiagramPage.
+- `/` HomePage, `/c/:slug` CategoryPage, `/v/:make/:model/:year[?variant=<uuid>]` VehiclePage, `/d/:slug` DiagramPage.
 - `/p/:partId` PartPage (part info + offers list).
 - `/listings/:listingId` ListingPage (photo carousel + seller card + `tel:` / `wa.me` CTAs).
 - `/search` SearchPage (debounced).
@@ -232,7 +232,8 @@ Limitations: vPIC only knows vehicles sold in the US/Canada. European-, Russian-
 ### State
 
 - `useAuthStore` (Zustand persist) holds `accessToken`, `refreshToken` (unused in v1, kept as `""` for shape stability), and `user { id, phone, fullName?, role }`. Persisted to `localStorage` under `autoparts-auth`.
-- `useCartStore`, `useGarageStore`, `useUiStore` exist but aren't load-bearing for the marketplace flows yet.
+- `useGarageStore` (Zustand persist, `autoparts-garage`) keeps the cars a buyer picked and the active one. Entries are keyed by `garageVehicleKey` (`make-model[-generation]-year[-variantId]`) and carry `vehicleVariantId`/`trim`/`engineCode` when the buyer narrowed to an exact version; CategoryPage sends `variant=` when present, else `make`+`model`+`year`.
+- `useCartStore`, `useUiStore` exist but aren't load-bearing for the marketplace flows yet.
 
 **Watch out:** Zustand selectors that return new objects (e.g. `(s) => ({ token: s.accessToken, user: s.user })`) trigger infinite re-renders. Use one selector per primitive, or `useShallow`. The marketplace components all use single-value selectors.
 
@@ -253,7 +254,8 @@ Response interceptor:
 - `api/sellers.ts` — `useMySellerProfile`, `useBecomeSeller` (also mutates local auth user role to `SELLER`), `useUpdateMySellerProfile`.
 - `api/listings.ts` — `useListing`, `usePartListings`, `usePartListingsSummary`, `useMyListings`, `useCreateListing`, `useUpdateListing`, `usePresignPhoto`, `useConfirmPhoto`, `useRemovePhoto`, plus the bare-axios helper `uploadFileToPresignedUrl`.
 - `api/search.ts` — `useSearch(q, page, size)` keyed by query + locale.
-- `api/catalog.ts` — catalog reads plus `useVinLookup()` (a mutation; the server caches decodes). It backs `components/catalog/VinLookup.tsx`, the "find by VIN" row rendered inside `VehiclePicker`: `EXACT` navigates to `/v/...` and adds the car to the garage, `AMBIGUOUS` lists the candidate versions, `MODEL_ONLY` offers the make/model/year page, `MAKE_ONLY` preselects the make, the rest explain and leave the manual picker (statuses in §6b).
+- `api/catalog.ts` — catalog reads plus `useVinLookup()` (a mutation; the server caches decodes). It backs `components/catalog/VinLookup.tsx`, the "find by VIN" row rendered inside `VehiclePicker`: `EXACT` navigates to `/v/...?variant=` and adds the car to the garage, `AMBIGUOUS` lists the candidate versions, `MODEL_ONLY` offers the make/model/year page, `MAKE_ONLY` preselects the make, the rest explain and leave the manual picker (statuses in §6b).
+- `components/catalog/VehiclePicker.tsx` — Make → Model → (Generation) → Year, then optional Trim and Engine selects fed by `useVariantsByGeneration`. The two narrow each other (engine list follows the trim and vice versa) and when exactly one variant remains it is the picked `vehicleVariantId`; a trim with a single engine fills the engine in by itself. Find works from Year alone, so buyers who don't know their engine still get the model-year match.
 
 ### Diagram callout panel
 

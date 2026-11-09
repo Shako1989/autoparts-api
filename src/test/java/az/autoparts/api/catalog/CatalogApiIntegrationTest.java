@@ -78,6 +78,8 @@ class CatalogApiIntegrationTest {
 
     UUID modelSonataId;
     UUID variantSonataId;
+    /** Same model year as {@link #variantSonataId} but a different engine; nothing is fitted to it. */
+    UUID variantSonataUltimateId;
     UUID categoryBrakePadsId;
     UUID partBoschId;
 
@@ -109,6 +111,9 @@ class CatalogApiIntegrationTest {
             .generation(sonataGen).year((short) 2014).trim("Sport").engineCode("G4KH").bodyType("sedan").fuel(FuelType.PETROL)
             .build());
         variantSonataId = sonata2014.getId();
+        variantSonataUltimateId = variants.save(VehicleVariant.builder()
+            .generation(sonataGen).year((short) 2014).trim("Ultimate").engineCode("G4KJ").bodyType("sedan").fuel(FuelType.PETROL)
+            .build()).getId();
 
         Category brakes = categories.save(Category.builder()
             .slug("brakes").nameAz("Əyləclər").nameRu("Тормоза").nameEn("Brakes").sortOrder(10).build());
@@ -168,7 +173,7 @@ class CatalogApiIntegrationTest {
             .queryParam("year", 2014)
             .when().get("/api/v1/catalog/variants")
             .then().statusCode(200)
-            .body("size()", is(1))
+            .body("size()", is(2))
             .body("[0].trim", equalTo("Sport"))
             .body("[0].engineCode", equalTo("G4KH"))
             .body("[0].fuel", equalTo("PETROL"));
@@ -234,6 +239,59 @@ class CatalogApiIntegrationTest {
             .body("items.size()", is(1))
             .body("items[0].name", equalTo("Front brake pad"))
             .body("items[0].brand", equalTo("Bosch"));
+    }
+
+    @Test
+    void parts_in_category_can_be_narrowed_to_one_vehicle_variant() {
+        given().header("Accept-Language", "en")
+            .queryParam("variant", variantSonataId.toString())
+            .when().get("/api/v1/catalog/categories/brake-pads/parts")
+            .then().statusCode(200)
+            .body("total", is(1))
+            .body("items[0].name", equalTo("Front brake pad"));
+
+        given().header("Accept-Language", "en")
+            .queryParam("variant", variantSonataUltimateId.toString())
+            .when().get("/api/v1/catalog/categories/brake-pads/parts")
+            .then().statusCode(200)
+            .body("total", is(0))
+            .body("items", hasSize(0));
+    }
+
+    @Test
+    void variant_filter_wins_over_make_model_year() {
+        // make/model/year alone would match the Sport's fitment; the Ultimate variant has none.
+        given().header("Accept-Language", "en")
+            .queryParam("make", "hyundai")
+            .queryParam("model", "sonata")
+            .queryParam("year", 2014)
+            .queryParam("variant", variantSonataUltimateId.toString())
+            .when().get("/api/v1/catalog/categories/brake-pads/parts")
+            .then().statusCode(200)
+            .body("total", is(0));
+
+        given().header("Accept-Language", "en")
+            .queryParam("make", "hyundai")
+            .queryParam("model", "sonata")
+            .queryParam("year", 2014)
+            .when().get("/api/v1/catalog/categories/brake-pads/parts")
+            .then().statusCode(200)
+            .body("total", is(1));
+    }
+
+    @Test
+    void category_diagrams_accept_the_variant_filter() {
+        given().queryParam("variant", variantSonataId.toString())
+            .when().get("/api/v1/catalog/categories/brake-pads/diagrams")
+            .then().statusCode(200)
+            .body("$", hasSize(0));
+    }
+
+    @Test
+    void malformed_variant_id_is_400() {
+        given().queryParam("variant", "not-a-uuid")
+            .when().get("/api/v1/catalog/categories/brake-pads/parts")
+            .then().statusCode(400);
     }
 
     @Test

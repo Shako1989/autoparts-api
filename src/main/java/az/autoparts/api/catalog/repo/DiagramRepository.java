@@ -42,4 +42,20 @@ public interface DiagramRepository extends JpaRepository<Diagram, UUID> {
         @Param("modelSlug") String modelSlug,
         @Param("year") short year
     );
+
+    /** Same as above, but for one exact vehicle variant. */
+    @Query("""
+        select distinct d from Diagram d
+         where d.category.id = :categoryId
+           and exists (
+             select 1 from DiagramCallout dc
+             join Fitment f on f.part.id = dc.part.id
+             where dc.diagram.id = d.id
+               and f.vehicleVariant.id = :variantId
+           )
+        """)
+    List<Diagram> findCompatibleByCategoryIdAndVariant(
+        @Param("categoryId") UUID categoryId,
+        @Param("variantId") UUID variantId
+    );
 }

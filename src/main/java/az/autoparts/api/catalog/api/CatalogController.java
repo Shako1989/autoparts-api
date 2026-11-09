@@ -98,12 +98,13 @@ public class CatalogController {
         @RequestParam(name = "make", required = false) String makeSlug,
         @RequestParam(name = "model", required = false) String modelSlug,
         @RequestParam(name = "year", required = false) Short year,
+        @RequestParam(name = "variant", required = false) UUID variantId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size,
         @RequestHeader(name = "Accept-Language", required = false) String acceptLanguage
     ) {
         return catalogService.listPartsInCategory(
-            slug, makeSlug, modelSlug, year, page, size, Locale.fromHeaderOrDefault(acceptLanguage));
+            slug, makeSlug, modelSlug, year, variantId, page, size, Locale.fromHeaderOrDefault(acceptLanguage));
     }
 
     @GetMapping("/parts/{partId}")
@@ -134,9 +135,10 @@ public class CatalogController {
         @RequestParam(name = "make", required = false) String makeSlug,
         @RequestParam(name = "model", required = false) String modelSlug,
         @RequestParam(name = "year", required = false) Short year,
+        @RequestParam(name = "variant", required = false) UUID variantId,
         @RequestHeader(name = "Accept-Language", required = false) String acceptLanguage
     ) {
         return catalogService.getCategoryDiagrams(
-            slug, makeSlug, modelSlug, year, Locale.fromHeaderOrDefault(acceptLanguage));
+            slug, makeSlug, modelSlug, year, variantId, Locale.fromHeaderOrDefault(acceptLanguage));
     }
 }

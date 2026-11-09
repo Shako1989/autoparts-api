@@ -198,7 +198,8 @@ class CatalogServiceImpl implements CatalogService {
 
     @Override
     public PageResponse<PartListItem> listPartsInCategory(
-        String slug, String makeSlug, String modelSlug, Short year, int page, int size, Locale locale
+        String slug, String makeSlug, String modelSlug, Short year, UUID variantId,
+        int page, int size, Locale locale
     ) {
         Category category = categories.findBySlug(slug)
             .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + slug));
@@ -207,13 +208,21 @@ class CatalogServiceImpl implements CatalogService {
         int safeSize = Math.min(100, Math.max(1, size));
         PageRequest pageable = PageRequest.of(safePage, safeSize, Sort.by("createdAt").descending());
 
-        boolean filterByVehicle = makeSlug != null && !makeSlug.isBlank()
+        Page<Part> result;
+        if (variantId != null) {
+            result = parts.findActiveByCategoryAndVariant(category.getId(), variantId, pageable);
+        } else if (isVehicleFilter(makeSlug, modelSlug, year)) {
+            result = parts.findActiveByCategoryAndMakeModelYear(category.getId(), makeSlug, modelSlug, year, pageable);
+        } else {
+            result = parts.findActiveByCategoryId(category.getId(), pageable);
+        }
+        return PageResponse.of(result).map(p -> partMapper.toListItem(p, locale));
+    }
+
+    private static boolean isVehicleFilter(String makeSlug, String modelSlug, Short year) {
+        return makeSlug != null && !makeSlug.isBlank()
             && modelSlug != null && !modelSlug.isBlank()
             && year != null;
-        Page<Part> result = filterByVehicle
-            ? parts.findActiveByCategoryAndMakeModelYear(category.getId(), makeSlug, modelSlug, year, pageable)
-            : parts.findActiveByCategoryId(category.getId(), pageable);
-        return PageResponse.of(result).map(p -> partMapper.toListItem(p, locale));
     }
 
     @Override
@@ -287,16 +296,18 @@ class CatalogServiceImpl implements CatalogService {
 
     @Override
     public List<DiagramResponse> getCategoryDiagrams(
-        String slug, String makeSlug, String modelSlug, Short year, Locale locale
+        String slug, String makeSlug, String modelSlug, Short year, UUID variantId, Locale locale
     ) {
         Category category = categories.findBySlug(slug)
             .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + slug));
-        boolean filterByVehicle = makeSlug != null && !makeSlug.isBlank()
-            && modelSlug != null && !modelSlug.isBlank()
-            && year != null;
-        List<Diagram> result = filterByVehicle
-            ? diagrams.findCompatibleByCategoryIdAndMakeModelYear(category.getId(), makeSlug, modelSlug, year)
-            : diagrams.findAllByCategoryId(category.getId());
+        List<Diagram> result;
+        if (variantId != null) {
+            result = diagrams.findCompatibleByCategoryIdAndVariant(category.getId(), variantId);
+        } else if (isVehicleFilter(makeSlug, modelSlug, year)) {
+            result = diagrams.findCompatibleByCategoryIdAndMakeModelYear(category.getId(), makeSlug, modelSlug, year);
+        } else {
+            result = diagrams.findAllByCategoryId(category.getId());
+        }
         return result.stream()
             .map(d -> hydrate(d, locale))
             .toList();

@@ -41,6 +41,27 @@ public interface PartRepository extends JpaRepository<Part, UUID> {
         Pageable pageable
     );
 
+    /**
+     * Parts in a category fitted to one exact vehicle variant (trim + engine).
+     * Preferred over the make/model/year query once the buyer has picked a
+     * variant, since a year's variants rarely share engine-specific parts.
+     */
+    @Query("""
+        select p from Part p
+         where p.deletedAt is null
+           and p.category.id = :categoryId
+           and exists (
+             select 1 from Fitment f
+              where f.part.id = p.id
+                and f.vehicleVariant.id = :variantId
+           )
+        """)
+    Page<Part> findActiveByCategoryAndVariant(
+        @org.springframework.data.repository.query.Param("categoryId") UUID categoryId,
+        @org.springframework.data.repository.query.Param("variantId") UUID variantId,
+        Pageable pageable
+    );
+
     @Query("select p from Part p left join fetch p.category where p.id in :ids and p.deletedAt is null")
     List<Part> findAllByIdInWithCategory(@org.springframework.data.repository.query.Param("ids") Collection<UUID> ids);
 

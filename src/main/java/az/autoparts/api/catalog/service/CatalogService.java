@@ -49,8 +49,14 @@ public interface CatalogService {
 
     CategoryDetailResponse getCategoryBySlug(String slug, Locale locale);
 
+    /**
+     * Parts in a category, optionally narrowed to a vehicle. {@code variantId}
+     * (an exact trim + engine) wins over the make/model/year triple when both
+     * are given; the triple alone matches any variant of that model year.
+     */
     PageResponse<PartListItem> listPartsInCategory(
-        String slug, String makeSlug, String modelSlug, Short year, int page, int size, Locale locale);
+        String slug, String makeSlug, String modelSlug, Short year, UUID variantId,
+        int page, int size, Locale locale);
 
     PartResponse getPart(UUID partId, Locale locale);
 
@@ -78,6 +84,7 @@ public interface CatalogService {
 
     DiagramResponse getDiagramBySlug(String slug, Locale locale);
 
+    /** Diagrams in a category, narrowed like {@link #listPartsInCategory}. */
     List<DiagramResponse> getCategoryDiagrams(
-        String slug, String makeSlug, String modelSlug, Short year, Locale locale);
+        String slug, String makeSlug, String modelSlug, Short year, UUID variantId, Locale locale);
 }
