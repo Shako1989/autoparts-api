@@ -8,7 +8,11 @@ task so they don't get re-asked.
 
 ## Now
 
-- [x] **1. Variant-level fitments in the admin.** (api: `feat/variant-fitments`; web: same branch name) Today a fitment is
+- [x] **1. Variant-level fitments in the admin.** Code-complete in api PR #1 and
+  web PR #4 (branch `feat/variant-fitments` in both); live once merged and the
+  VM is updated. The "seed scripts attach fitments per variant" part has no
+  script to change yet: the first part seed (task 4) inserts fitments per
+  variant directly in SQL. Original note: Today a fitment is
   make + model + year and attaches the part to *every* variant of that model
   year, so an oil filter for the 2.0 EcoBoost would also show for 2.5 Duratec
   cars and the new Trim/Engine picker would filter nothing. Extend
