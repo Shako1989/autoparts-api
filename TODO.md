@@ -101,6 +101,12 @@ task so they don't get re-asked.
 
 ## Done
 
+- [x] Vehicle page redesign (web `feat/vehicle-page-redesign`, api
+  `feat/vehicle-page-data`): hero with spec chips and the car render, category
+  photo cards with per-car part counts, parts strip with lowest offer price,
+  vehicle info sidebar. Photos still missing for transmission, exhaust and
+  hvac (lucide icons until then); hp / transmission / drivetrain chips need
+  columns the variant table does not have.
 - [x] VIN lookup: NHTSA vPIC decode + catalog match, cached in Redis
   (`GET /api/v1/catalog/vin/{vin}`), VIN row in the buyer picker.
 - [x] Fusion II (CD391, MY2013–2020) generation + 89 US-market variants in prod.

@@ -13,6 +13,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +50,7 @@ import az.autoparts.api.catalog.service.CatalogService;
 import az.autoparts.api.common.error.BadRequestException;
 
 import io.restassured.RestAssured;
+import io.restassured.common.mapper.TypeRef;
 import io.restassured.http.ContentType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -87,6 +89,7 @@ class CatalogApiIntegrationTest {
     UUID variantSonataId;
     /** Same model year as {@link #variantSonataId} but a different engine; nothing is fitted to it. */
     UUID variantSonataUltimateId;
+    UUID categoryBrakesId;
     UUID categoryBrakePadsId;
     UUID partBoschId;
 
@@ -124,6 +127,7 @@ class CatalogApiIntegrationTest {
 
         Category brakes = categories.save(Category.builder()
             .slug("brakes").nameAz("Əyləclər").nameRu("Тормоза").nameEn("Brakes").sortOrder(10).build());
+        categoryBrakesId = brakes.getId();
         Category brakePads = categories.save(Category.builder()
             .parent(brakes).slug("brake-pads").nameAz("Əyləc kolodkası").nameRu("Тормозные колодки").nameEn("Brake pads").sortOrder(0).build());
         categoryBrakePadsId = brakePads.getId();
@@ -362,5 +366,55 @@ class CatalogApiIntegrationTest {
             .body("[0].year", is(2014))
             .body("[0].position", equalTo("FRONT"))
             .body("[0].notes", nullValue());
+    }
+
+    @Test
+    void category_part_counts_roll_up_to_the_root_and_follow_the_variant() {
+        Map<String, Integer> fitted = given()
+            .queryParam("variant", variantSonataId.toString())
+            .when().get("/api/v1/catalog/categories/part-counts")
+            .then().statusCode(200)
+            .extract().as(new TypeRef<Map<String, Integer>>() {});
+        assertThat(fitted)
+            .containsEntry(categoryBrakePadsId.toString(), 1)
+            .containsEntry(categoryBrakesId.toString(), 1)
+            .hasSize(2);
+
+        Map<String, Integer> other = given()
+            .queryParam("variant", variantSonataUltimateId.toString())
+            .when().get("/api/v1/catalog/categories/part-counts")
+            .then().statusCode(200)
+            .extract().as(new TypeRef<Map<String, Integer>>() {});
+        assertThat(other).isEmpty();
+
+        Map<String, Integer> whole = given()
+            .when().get("/api/v1/catalog/categories/part-counts")
+            .then().statusCode(200)
+            .extract().as(new TypeRef<Map<String, Integer>>() {});
+        assertThat(whole).containsEntry(categoryBrakesId.toString(), 1);
+    }
+
+    @Test
+    void parts_for_vehicle_span_every_category_and_respect_the_variant() {
+        given().header("Accept-Language", "en")
+            .queryParam("variant", variantSonataId.toString())
+            .when().get("/api/v1/catalog/parts")
+            .then().statusCode(200)
+            .body("total", is(1))
+            .body("items[0].id", equalTo(partBoschId.toString()))
+            .body("items[0].categorySlug", equalTo("brake-pads"))
+            .body("items[0].name", equalTo("Front brake pad"));
+
+        given()
+            .queryParam("variant", variantSonataUltimateId.toString())
+            .when().get("/api/v1/catalog/parts")
+            .then().statusCode(200)
+            .body("total", is(0));
+
+        given()
+            .queryParam("make", "hyundai").queryParam("model", "sonata").queryParam("year", 2014)
+            .when().get("/api/v1/catalog/parts")
+            .then().statusCode(200)
+            .body("total", is(1));
     }
 }

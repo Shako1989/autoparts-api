@@ -38,6 +38,7 @@ public class PartMapper {
     public PartListItem toListItem(Part part, Locale locale) {
         return new PartListItem(
             part.getId(),
+            part.getCategory().getSlug(),
             LocalisedNameSupport.name(part, locale),
             part.getBrand(),
             part.getDefaultImageUrl()

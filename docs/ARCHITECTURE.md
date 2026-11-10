@@ -169,6 +169,8 @@ The standalone diagram pages live at `/d/{slug}` and the category page (`/c/carr
 | GET  | `/api/v1/catalog/categories/{slug}` | none | — | Detail |
 | GET  | `/api/v1/catalog/categories/{slug}/parts` | none | — | Paginated; `variant=` (exact trim + engine) or `make`+`model`+`year` narrows by fitment |
 | GET  | `/api/v1/catalog/categories/{slug}/diagrams` | none | — | List for inline embed; same vehicle filters as `/parts` |
+| GET  | `/api/v1/catalog/categories/part-counts` | none | — | `{categoryId: count}` of active parts per category, rolled up to every ancestor; same vehicle filters as `/parts`, none = whole catalog. The "N parts" on the vehicle page tiles |
+| GET  | `/api/v1/catalog/parts?variant=…` | none | — | Paginated parts that fit the vehicle across all categories, newest first; same filters, `categorySlug` on each item. The vehicle page's parts strip |
 | GET  | `/api/v1/catalog/parts/{id}` | none | — | |
 | GET  | `/api/v1/catalog/parts/{id}/fitments` | none | — | |
 | POST | `/api/v1/admin/parts/{id}/fitments` | JWT | STAFF | Rules `{makeSlug, modelSlug, year, generationSlug?, trim?, engineCode?}`; a rule attaches every matching variant of the model year, narrowing fields match case-insensitively, a rule matching nothing is 400. Seller listing creation reuses the same rules |
@@ -186,6 +188,7 @@ The standalone diagram pages live at `/d/{slug}` and the category page (`/c/carr
 | GET  | `/api/v1/my/listings?status=` | JWT | SELLER | |
 | GET  | `/api/v1/parts/{partId}/listings` | none | — | Active offers for a part |
 | GET  | `/api/v1/parts/{partId}/listings/summary` | none | — | `{count, minPriceMinor, currency}` |
+| GET  | `/api/v1/parts/listings-summary?ids=a,b,…` | none | — | The same for up to 100 parts in one call, request order, zeros for parts without offers |
 | GET  | `/api/v1/search?q=&page=&size=` | none | — | Postgres trigram + exact part-number |
 
 ---
@@ -225,6 +228,7 @@ Limitations: vPIC only knows vehicles sold in the US/Canada. European-, Russian-
 ### Routes (`autoparts-web/src/App.tsx`)
 
 - `/` HomePage, `/c/:slug` CategoryPage, `/v/:make/:model/:year[?variant=<uuid>]` VehiclePage, `/d/:slug` DiagramPage.
+- VehiclePage (`components/vehicle/*`): dark hero (breadcrumbs, make badge, name + version, spec chips for engine / fuel / body, car render), root categories as photo cards with the count of parts that fit (`/categories/part-counts`) and a "view all" panel of every leaf, a sideways strip of parts that fit with "from X ₼" from the batch listing stats, and a sidebar with the car's facts, a "change vehicle" toggle that opens the picker in the main column, and buying tips. Photos are bundled under `src/assets/{categories,makes,vehicles}/<slug>.webp` and found by `lib/catalogImages.ts` (`import.meta.glob`, so a new file needs no registration); a category's admin-set `iconUrl` wins over the bundled photo, and both over the lucide icon in `CategoryIcon.tsx`. The vehicle render is looked up as `<make>-<model>-<generation code>.webp`, then `<make>-<model>.webp`.
 - `/p/:partId` PartPage (part info + offers list).
 - `/listings/:listingId` ListingPage (photo carousel + seller card + `tel:` / `wa.me` CTAs).
 - `/search` SearchPage (debounced).

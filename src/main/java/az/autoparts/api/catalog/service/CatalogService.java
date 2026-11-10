@@ -58,6 +58,23 @@ public interface CatalogService {
         String slug, String makeSlug, String modelSlug, Short year, UUID variantId,
         int page, int size, Locale locale);
 
+    /**
+     * Parts that fit a vehicle in any category, newest first, with the same
+     * vehicle filter rules as {@link #listPartsInCategory}; without a vehicle
+     * filter, every active part.
+     */
+    PageResponse<PartListItem> listPartsForVehicle(
+        String makeSlug, String modelSlug, Short year, UUID variantId,
+        int page, int size, Locale locale);
+
+    /**
+     * Active parts per category for a vehicle, rolled up to every ancestor,
+     * so a root's count is the number of parts anywhere under it. Categories
+     * without parts are absent. Same vehicle filter rules as
+     * {@link #listPartsInCategory}; without a filter, the whole catalog.
+     */
+    Map<UUID, Long> countPartsByCategory(String makeSlug, String modelSlug, Short year, UUID variantId);
+
     PartResponse getPart(UUID partId, Locale locale);
 
     /**
