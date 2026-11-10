@@ -87,9 +87,23 @@ task so they don't get re-asked.
   (seed-only, no VM rebuild). Original note: Same approach for the
   2.3 Duratec, 3.0 Duratec V6, 2.5 Duratec, 3.5 V6 and 2.5 Atkinson Hybrid.
 
-- [ ] **6. Body and lighting.** Headlights, taillights, bumpers, fenders, hood,
-  grille, mirrors, radiator support. Split by facelift: CD391 2013–2016 vs
-  2017–2020, CD338 2006–2009 vs 2010–2012.
+- [x] **6. Body and lighting.** Done in
+  `scripts/seed-ford-fusion-body-lighting.sh` (branch `feat/fusion-body-lighting`):
+  180 parts, 308 numbers, 4,719 fitments across both generations; every one
+  of the 131 Fusion variants gets 24–49 body / lighting parts. Headlamps
+  (halogen, halogen + signature, LED), outer and inner tail lamps, fog lamps,
+  front and rear bumper covers (by sensors / tow hook / Sport / exhaust),
+  fenders (incl. the Energi charge-port fender), hoods, grilles (upper bars,
+  lower bumper grilles, fog bezels), door mirrors and caps, radiator supports
+  and trunk lids, split by facelift (CD338 2006–2009 / 2010–2012, CD391
+  2013–2016 / 2017–2020). Ford splits body parts by option code rather than
+  trim, so option-level parts are fitted to every trim of the window with the
+  option in `fitments.notes`. Aftermarket numbers are thin (every catalog
+  blocked fetches); sources and LEFT OUT in the script header. Run the
+  extracted SQL on prod (seed-only, no VM rebuild). Original note:
+  Headlights, taillights, bumpers, fenders, hood, grille, mirrors, radiator
+  support. Split by facelift: CD391 2013–2016 vs 2017–2020, CD338 2006–2009
+  vs 2010–2012.
 
 - [ ] **7. Diagrams.** Ford's exploded views are copyrighted, so this needs
   images we own (photos or drawn schematics). Parked until the image source is
