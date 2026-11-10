@@ -70,7 +70,21 @@ task so they don't get re-asked.
   guessed numbers. Fitments per variant. Delivered as a SQL seed.
   *Decision: service parts before body parts (2026-11-09).*
 
-- [ ] **5. Service parts, batch 2 — Fusion I (CD338).** Same approach for the
+- [x] **5. Service parts, batch 2 — Fusion I (CD338).** Done in
+  `scripts/seed-ford-fusion-i-service-parts.sh` (branch `feat/fusion-i-service-parts`):
+  68 new parts, 294 numbers and 1,308 fitments per variant, plus five parts
+  shared with the CD391 by OEM number (2.3 / 2.5 water pump and thermostat,
+  FL-910S oil filter, AYFS-32Y-RX plug, 9E5Z-12029-A coil) that only gain
+  CD338 fitments and a generation-neutral name; every CD338 variant gets
+  30–34 parts. Sources per claim and the LEFT OUT list are in the script
+  header. Below the 90% bar and not seeded: the Hybrid oil and air filters,
+  the 3.0 V6 battery for MY2007-2009, the 2.3 manual-transmission belt
+  outside MY2008, the AWD rear wheel bearing, the pre-08/2006 forward control
+  arm, current Motorcraft retail SKUs for struts / shocks / hubs / most belts
+  and tensioners, and nearly all aftermarket numbers for plugs, coils, belts,
+  cooling and suspension (catalog sites block fetches). No serviceable fuel
+  filter exists on the CD338 (in-tank). Run the extracted SQL on prod
+  (seed-only, no VM rebuild). Original note: Same approach for the
   2.3 Duratec, 3.0 Duratec V6, 2.5 Duratec, 3.5 V6 and 2.5 Atkinson Hybrid.
 
 - [ ] **6. Body and lighting.** Headlights, taillights, bumpers, fenders, hood,
