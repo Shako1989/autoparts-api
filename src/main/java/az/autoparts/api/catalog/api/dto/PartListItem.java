@@ -8,6 +8,7 @@ import java.util.UUID;
  */
 public record PartListItem(
     UUID id,
+    String categorySlug,
     String name,
     String brand,
     String defaultImageUrl

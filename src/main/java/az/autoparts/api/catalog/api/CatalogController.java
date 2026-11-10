@@ -1,6 +1,7 @@
 package az.autoparts.api.catalog.api;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -84,6 +85,20 @@ public class CatalogController {
         return catalogService.getCategoryTree(Locale.fromHeaderOrDefault(acceptLanguage));
     }
 
+    /**
+     * Active parts per category for a vehicle, keyed by category id and rolled
+     * up to the roots. Backs the "N parts" labels on the vehicle page tiles.
+     */
+    @GetMapping("/categories/part-counts")
+    public Map<UUID, Long> countPartsByCategory(
+        @RequestParam(name = "make", required = false) String makeSlug,
+        @RequestParam(name = "model", required = false) String modelSlug,
+        @RequestParam(name = "year", required = false) Short year,
+        @RequestParam(name = "variant", required = false) UUID variantId
+    ) {
+        return catalogService.countPartsByCategory(makeSlug, modelSlug, year, variantId);
+    }
+
     @GetMapping("/categories/{slug}")
     public CategoryDetailResponse getCategory(
         @PathVariable String slug,
@@ -105,6 +120,21 @@ public class CatalogController {
     ) {
         return catalogService.listPartsInCategory(
             slug, makeSlug, modelSlug, year, variantId, page, size, Locale.fromHeaderOrDefault(acceptLanguage));
+    }
+
+    /** Parts that fit a vehicle across every category, newest first; the vehicle page's parts strip. */
+    @GetMapping("/parts")
+    public PageResponse<PartListItem> listPartsForVehicle(
+        @RequestParam(name = "make", required = false) String makeSlug,
+        @RequestParam(name = "model", required = false) String modelSlug,
+        @RequestParam(name = "year", required = false) Short year,
+        @RequestParam(name = "variant", required = false) UUID variantId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size,
+        @RequestHeader(name = "Accept-Language", required = false) String acceptLanguage
+    ) {
+        return catalogService.listPartsForVehicle(
+            makeSlug, modelSlug, year, variantId, page, size, Locale.fromHeaderOrDefault(acceptLanguage));
     }
 
     @GetMapping("/parts/{partId}")

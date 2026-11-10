@@ -220,6 +220,52 @@ class CatalogServiceImpl implements CatalogService {
         return PageResponse.of(result).map(p -> partMapper.toListItem(p, locale));
     }
 
+    @Override
+    public PageResponse<PartListItem> listPartsForVehicle(
+        String makeSlug, String modelSlug, Short year, UUID variantId, int page, int size, Locale locale
+    ) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(100, Math.max(1, size));
+        PageRequest pageable = PageRequest.of(safePage, safeSize, Sort.by("createdAt").descending());
+
+        Page<Part> result;
+        if (variantId != null) {
+            result = parts.findActiveByVariant(variantId, pageable);
+        } else if (isVehicleFilter(makeSlug, modelSlug, year)) {
+            result = parts.findActiveByMakeModelYear(makeSlug, modelSlug, year, pageable);
+        } else {
+            result = parts.findAllByDeletedAtIsNull(pageable);
+        }
+        return PageResponse.of(result).map(p -> partMapper.toListItem(p, locale));
+    }
+
+    @Override
+    public Map<UUID, Long> countPartsByCategory(String makeSlug, String modelSlug, Short year, UUID variantId) {
+        List<PartRepository.CategoryPartCount> own;
+        if (variantId != null) {
+            own = parts.countActiveByCategoryForVariant(variantId);
+        } else if (isVehicleFilter(makeSlug, modelSlug, year)) {
+            own = parts.countActiveByCategoryForMakeModelYear(makeSlug, modelSlug, year);
+        } else {
+            own = parts.countActiveByCategory();
+        }
+        if (own.isEmpty()) return Map.of();
+
+        // A part sits in exactly one category, so adding its category's count
+        // to every ancestor never counts it twice.
+        Map<UUID, UUID> parentOf = new HashMap<>();
+        for (Category c : categories.findAll()) {
+            if (c.getParent() != null) parentOf.put(c.getId(), c.getParent().getId());
+        }
+        Map<UUID, Long> counts = new HashMap<>();
+        for (PartRepository.CategoryPartCount row : own) {
+            for (UUID id = row.getCategoryId(); id != null; id = parentOf.get(id)) {
+                counts.merge(id, row.getPartCount(), Long::sum);
+            }
+        }
+        return counts;
+    }
+
     private static boolean isVehicleFilter(String makeSlug, String modelSlug, Short year) {
         return makeSlug != null && !makeSlug.isBlank()
             && modelSlug != null && !modelSlug.isBlank()
